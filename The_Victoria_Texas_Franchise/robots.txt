@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://elo2026x.github.io/sitemap.xml
