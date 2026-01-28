@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELO2026X | FORENSIC ARCHIVE</title>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-695HZ3HSYF"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-695HZ3HSYF');
+    </script>
+    <!-- Tailwind & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-red: #ff003c;
+            --bg-dark: #050505;
+            --grid-color: rgba(0, 243, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #e5e5e5;
+            font-family: 'Rajdhani', sans-serif;
+            background-image:
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 30px 30px;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* CRT Effect */
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scanline {
+            0% {
+                bottom: 100%;
+            }
+
+            100% {
+                bottom: -100%;
+            }
+        }
+
+        /* Glitch Text */
+        .glitch-text {
+            position: relative;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -1px 0 var(--neon-red);
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -1px 0 var(--neon-blue);
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                clip: rect(10px, 9999px, 30px, 0);
+            }
+
+            20% {
+                clip: rect(80px, 9999px, 100px, 0);
+            }
+
+            40% {
+                clip: rect(5px, 9999px, 50px, 0);
+            }
+
+            100% {
+                clip: rect(40px, 9999px, 80px, 0);
+            }
+        }
+
+        @keyframes glitch-anim2 {
+            0% {
+                clip: rect(60px, 9999px, 90px, 0);
+            }
+
+            20% {
+                clip: rect(10px, 9999px, 30px, 0);
+            }
+
+            40% {
+                clip: rect(40px, 9999px, 70px, 0);
+            }
+
+            100% {
+                clip: rect(20px, 9999px, 50px, 0);
+            }
+        }
+
+        /* Cards */
+        .dossier-card {
+            background: rgba(13, 13, 13, 0.8);
+            border: 1px solid #333;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .dossier-card:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .redacted {
+            background: #333;
+            color: transparent;
+            user-select: none;
+            cursor: help;
+            transition: all 0.2s;
+        }
+
+        .redacted:hover {
+            background: transparent;
+            color: var(--neon-red);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+    <div class="scanline"></div>
+
+    <!-- Navigation -->
+    <nav class="border-b border-gray-800 bg-black/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold tracking-widest text-white glitch-text"
+                        data-text="ELO2026X">ELO2026X</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="http://localhost:5173/Creepy_Horror_Stories/"
+                            class="text-gray-300 hover:text-white hover:bg-red-900/20 px-3 py-2 rounded-md text-sm font-medium transition-colors">HORROR</a>
+                        <a href="#"
+                            class="text-cyan-400 bg-cyan-900/20 px-3 py-2 rounded-md text-sm font-bold border border-cyan-500/30">FORENSICS</a>
+                        <a href="http://localhost:3000"
+                            class="text-gray-300 hover:text-white hover:bg-blue-900/20 px-3 py-2 rounded-md text-sm font-medium transition-colors">MARKETING</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="relative pt-20 pb-12 text-center">
+        <div class="inline-block border border-red-500/50 bg-red-900/10 px-4 py-1 mb-4 rounded-full">
+            <span class="mono text-red-500 text-xs tracking-wider animate-pulse">● LIVE CASE FILE: VICTORIA
+                COUNTY</span>
+        </div>
+        <h1 class="text-6xl md:text-8xl font-bold mb-4 glitch-text tracking-tighter"
+            data-text="FORENSIC INVESTIGATIONS">FORENSIC INVESTIGATIONS</h1>
+        <p class="text-gray-400 max-w-2xl mx-auto mono text-sm md:text-base">
+            SYSTEMIC CORRUPTION DETECTED // BOND FRAUD // GRANT MISAPPROPRIATION
+            <br>
+            <span class="text-xs text-gray-600">ID: ELO-2026-VC-TX</span>
+        </p>
+    </header>
+
+    <!-- Dashboard -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            <!-- Column 1: Evidence -->
+            <div class="col-span-1 md:col-span-2 space-y-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-cyan-400 flex items-center gap-2">
+                        <span class="text-lg mono">[01]</span> EVIDENCE LOCKER
+                    </h2>
+                    <span class="mono text-xs text-gray-600">SECURE_LEVEL_3</span>
+                </div>
+
+                <!-- File 1 -->
+                <div class="dossier-card p-6 rounded-lg relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-2 opacity-50">
+                        <svg class="w-20 h-20 text-gray-800" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                        </svg>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded mono">CRITIQUE</span>
+                            <span class="text-gray-500 text-xs mono">PDF // 2.4MB</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">The Victoria
+                            Franchise</h3>
+                        <p class="text-gray-400 text-sm mb-4">Comprehensive breakdown of the vertical monopoly between
+                            the Sheriff's Office and the District Courts.</p>
+                        <a href="./The Victoria Franchise.pdf"
+                            class="inline-flex items-center text-cyan-400 hover:text-white text-sm mono border-b border-cyan-500/50 hover:border-white pb-1 transition-all">
+                            ACCESS_FILE_0x88 >
+                        </a>
+                    </div>
+                </div>
+
+                <!-- File 2 -->
+                <div class="dossier-card p-6 rounded-lg relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded mono">RECENT</span>
+                            <span class="text-gray-500 text-xs mono">PDF // 1.1MB</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">Federal Filing:
+                            1_26_2026.pdf</h3>
+                        <p class="text-gray-400 text-sm mb-4">Emergency Motion for Preliminary Injunction (25-CV-0075).
+                        </p>
+                        <a href="./1_26_2026.pdf"
+                            class="inline-flex items-center text-cyan-400 hover:text-white text-sm mono border-b border-cyan-500/50 hover:border-white pb-1 transition-all">
+                            ACCESS_FILE_0x99 >
+                        </a>
+                    </div>
+                </div>
+
+                <!-- File 3 -->
+                <div class="dossier-card p-6 rounded-lg relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded mono">MIRROR</span>
+                            <span class="text-gray-500 text-xs mono">HTML // ARCHIVE</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">Flow.html
+                            (Consumer Complaint Portal)</h3>
+                        <p class="text-gray-400 text-sm mb-4">Recovered interface of the Texas OAG consumer portal.
+                            Evidence of system structure.</p>
+                        <a href="./Flow.html"
+                            class="inline-flex items-center text-cyan-400 hover:text-white text-sm mono border-b border-cyan-500/50 hover:border-white pb-1 transition-all">
+                            EXECUTE_SIMULATION >
+                        </a>
+                    </div>
+                </div>
+
+                <!-- File 4: The Golden Crescent Franchise -->
+                <div
+                    class="dossier-card p-6 rounded-lg relative overflow-hidden group col-span-1 md:col-span-2 border-red-900/40 bg-red-950/10">
+                    <div class="absolute top-0 right-0 p-2 opacity-50">
+                        <svg class="w-20 h-20 text-red-900/50" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded mono animate-pulse">NEW
+                                INTEL</span>
+                            <span class="text-gray-500 text-xs mono">REGION_WIDE // RICO</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2 text-white group-hover:text-red-400 transition-colors">The
+                            Golden Crescent "Franchise"</h3>
+                        <p class="text-gray-400 text-sm mb-4">Analysis of the regional suppression engine operating
+                            across Victoria, Calhoun, Goliad, and Jackson counties. Includes "Gaslighting" tactics and
+                            Media Complicity reports.</p>
+                        <div class="flex gap-4">
+                            <a href="./Regional_Threat.md"
+                                class="inline-flex items-center text-red-400 hover:text-white text-sm mono border-b border-red-500/50 hover:border-white pb-1 transition-all">
+                                VIEW_REGIONAL_MAP >
+                            </a>
+                            <a href="./Franchise_Book.md"
+                                class="inline-flex items-center text-red-400 hover:text-white text-sm mono border-b border-red-500/50 hover:border-white pb-1 transition-all">
+                                ACCESS_EBOOK_MANUSCRIPT >
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 2: Status & Comms -->
+            <div class="col-span-1 space-y-6">
+                <!-- Status Panel -->
+                <div class="border border-gray-800 bg-black p-4 rounded-lg">
+                    <h3 class="text-gray-500 text-xs mono mb-4 uppercase">System Status</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-white">COURT MONITORING</span>
+                            <span class="text-green-500 text-xs mono animate-pulse">ACTIVE</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                            <div class="bg-green-500 h-full w-3/4"></div>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-white">SERVER EXHAUST</span>
+                            <span class="text-red-500 text-xs mono animate-bounce">CRITICAL</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                            <div class="bg-red-500 h-full w-[5%]"></div>
+                        </div>
+                        <p class="text-xs text-red-500 mono mt-1">WARNING: DATA FLOW INTERRUPTED</p>
+                    </div>
+                </div>
+
+                <!-- Surveillance Link -->
+                <div class="dossier-card p-6 rounded-lg bg-red-900/10 border-red-900/30">
+                    <h3 class="text-red-500 font-bold mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        SURVEILLANCE FEED
+                    </h3>
+                    <p class="text-xs text-red-400 mb-4 mono">RESTRICTED ACCESS. AUTHORIZED PERSONNEL ONLY.</p>
+                    <a href="./May 16th 2025 RING CAMERA FOOTAGE"
+                        class="block w-full text-center bg-red-900/20 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white py-2 rounded text-sm mono transition-colors">
+                        [ VIEW RAW FOOTAGE ]
+                    </a>
+                </div>
+
+                <!-- Footer Info -->
+                <div class="text-xs text-gray-700 mono leading-relaxed">
+                    <p>ENCRYPTED: AES-256</p>
+                    <p>NODE: VICTORIA_MAIN</p>
+                    <p>USER: ADMIN_ORTIZ</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
