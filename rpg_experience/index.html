@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ELO2026X | SIMULATION DECK</title>
-    <!-- Tailwind for UI overlay -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="../cover.png" type="image/png">
     <style>
         body {
             margin: 0;
@@ -28,6 +27,11 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.5rem;
+            transition: opacity 1s ease;
         }
 
         .interactive {
@@ -62,6 +66,113 @@
                 transform: translate(0, 0);
             }
         }
+
+        /* UTILITY CLASSES (Replicating Tailwind) */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .title-large {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+        }
+
+        .text-header {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .text-xs {
+            font-size: 0.75rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-gray {
+            color: #888;
+            margin-top: 1rem;
+        }
+
+        .text-red {
+            color: #ef4444;
+        }
+
+        .text-green {
+            color: #22c55e;
+        }
+
+        .text-cyan {
+            color: #00f3ff;
+        }
+
+        .text-white {
+            color: white;
+        }
+
+        .btn-start {
+            border: 1px solid #22c55e;
+            color: #22c55e;
+            background: transparent;
+            padding: 0.75rem 2rem;
+            font-family: monospace;
+            font-size: 1.25rem;
+            letter-spacing: 0.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-start:hover {
+            background-color: #22c55e;
+            color: black;
+        }
+
+        .btn-exit {
+            background-color: rgba(60, 0, 0, 0.3);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 0.5rem 1.5rem;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .btn-exit:hover {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .controls-box {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 0.25rem;
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        .opacity-0 {
+            opacity: 0;
+        }
+
+        .opacity-100 {
+            opacity: 1;
+        }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
     <!-- Import Map for Three.js -->
     <script type="importmap">
@@ -77,33 +188,27 @@
 <body>
     <div id="canvas-container"></div>
 
-    <!-- YouTube Audio Embed (1x1 pixel for browser autoplay policy compliance) -->
+    <!-- YouTube Audio Embed (White Bat Audio - Usually Safe) -->
     <div id="player"
         style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;">
     </div>
 
-    <!-- Start Overlay (Required for Audio) -->
-    <div id="start-overlay" class="absolute inset-0 bg-black z-50 flex items-center justify-center flex-col">
-        <h1 class="text-6xl font-bold glitch-text mb-4">SIMULATION DECK</h1>
-        <button id="start-btn"
-            class="border border-green-500 text-green-500 hover:bg-green-500 hover:text-black px-8 py-3 font-mono text-xl tracking-widest transition-all">INITIALIZE
-            SYSTEM</button>
-        <p class="text-gray-500 mt-4 text-xs font-mono">ESTABLISHING NEURAL LINK...</p>
-        <p id="audio-status" class="text-red-500 mt-2 text-xs font-mono hidden">AUDIO STREAM SIGNAL LOST - RETRYING...
-        </p>
+    <!-- Start Overlay -->
+    <div id="start-overlay" class="overlay-screen">
+        <h1 class="title-large glitch-text">SIMULATION DECK</h1>
+        <button id="start-btn" class="btn-start">INITIALIZE SYSTEM</button>
+        <p class="text-gray text-xs font-mono">ESTABLISHING NEURAL LINK...</p>
+        <p id="audio-status" class="text-red mt-2 text-xs font-mono hidden">AUDIO STREAM SIGNAL LOST - RETRYING...</p>
     </div>
 
-    <div id="ui-layer" class="flex flex-col justify-between p-6 opacity-0 transition-opacity duration-1000"
-        id="main-ui">
+    <div id="ui-layer" class="opacity-0" id="main-ui">
         <header>
-            <h1 class="text-4xl font-bold glitch-text">SIMULATION DECK // LEVEL 01</h1>
-            <p class="text-green-500 text-sm mt-2">SYSTEM: ONLINE // PHYSICS: ACTIVE // MUSIC: OSAMU SATO + INFECTED
-                MUSHROOM</p>
+            <h1 class="text-header glitch-text">SIMULATION DECK // LEVEL 01</h1>
+            <p class="text-green text-sm mt-2">SYSTEM: ONLINE // PHYSICS: ACTIVE // MUSIC: WHITE BAT AUDIO</p>
         </header>
 
-        <div
-            class="absolute bottom-6 left-6 text-white text-sm bg-black/50 p-4 rounded border border-cyan-500/30 pointer-events-none">
-            <p class="text-cyan-400 font-bold mb-2">CONTROLS:</p>
+        <div class="controls-box">
+            <p class="text-cyan font-bold mb-2">CONTROLS:</p>
             <ul class="space-y-1 text-gray-400">
                 <li><span class="text-white font-mono">[W,A,S,D]</span> MOVE</li>
                 <li><span class="text-white font-mono">[SPACE]</span> JUMP</li>
@@ -112,10 +217,8 @@
             </ul>
         </div>
 
-        <div class="absolute top-6 right-6">
-            <a href="../index.html"
-                class="interactive bg-red-900/20 border border-red-500 text-red-500 px-6 py-2 hover:bg-red-500 hover:text-white transition-colors">EXIT
-                SIMULATION</a>
+        <div style="position: absolute; top: 1.5rem; right: 1.5rem;">
+            <a href="../index.html" class="interactive btn-exit">EXIT SIMULATION</a>
         </div>
     </div>
 
@@ -166,12 +269,12 @@
             player = new YT.Player('player', {
                 height: '1',
                 width: '1',
-                videoId: '8BdG7S2m7Cg', // Cyberpunk / Mid-Tempo Bass Mix (Suno style)
+                videoId: 'Ua_M3yF0_k0', // White Bat Audio - Hardware (Safe for Embeds)
                 playerVars: {
                     'playsinline': 1,
                     'controls': 0,
                     'loop': 1,
-                    'playlist': '8BdG7S2m7Cg', // Loop the single video
+                    'playlist': 'Ua_M3yF0_k0', // Loop the single video
                     'autoplay': 0,
                     'origin': window.location.origin
                 },
