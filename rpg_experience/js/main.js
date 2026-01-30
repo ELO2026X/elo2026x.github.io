@@ -59,8 +59,8 @@ function init() {
     // 6. Player Setup
     createPlayer();
 
-    // 7. Audio System
-    setupAudio();
+    // 7. Creatures (Osamu Sato Style)
+    createPsychedelicCreatures();
 
     // 8. Controls & Events
     controls = new OrbitControls(camera, renderer.domElement);
@@ -76,27 +76,6 @@ function init() {
 
     // Start Loop
     animate();
-}
-
-function setupAudio() {
-    // Audio Listener
-    const listener = new THREE.AudioListener();
-    camera.add(listener);
-
-    // Global Audio Source
-    const sound = new THREE.Audio(listener);
-    const audioLoader = new THREE.AudioLoader();
-
-    // Load background music
-    // Note: User must place 'osamu_sato.mp3' in assets folder
-    audioLoader.load('../assets/osamu_sato.mp3', function (buffer) {
-        sound.setBuffer(buffer);
-        sound.setLoop(true);
-        sound.setVolume(0.5);
-        sound.play();
-    }, undefined, function (err) {
-        console.warn('Audio file not found: assets/osamu_sato.mp3');
-    });
 }
 
 function createDetailedEnvironment() {
@@ -263,6 +242,159 @@ function createDetailedEnvironment() {
     scene.add(particles);
 }
 
+function createPsychedelicCreatures() {
+    // "EQUAL" / Osamu Sato Style Entity
+    // A centralized totem with a face, wings, and floating eyes
+
+    // 1. The Head (Bright Yellow Sphere + Face elements)
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 15, -40); // Hovering in the distance
+
+    // Main Face Shape
+    const headGeo = new THREE.SphereGeometry(6, 32, 32);
+    const headMat = new THREE.MeshStandardMaterial({
+        color: 0xffff00,
+        emissive: 0xaa00aa,
+        emissiveIntensity: 0.2,
+        roughness: 0.2
+    });
+    const head = new THREE.Mesh(headGeo, headMat);
+    headGroup.add(head);
+
+    // Eyes (Cyan Discs)
+    const eyeGeo = new THREE.SphereGeometry(1.5, 16, 16);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-2.5, 1, 5);
+    headGroup.add(leftEye);
+
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(2.5, 1, 5);
+    headGroup.add(rightEye);
+
+    // Mouth (Torus Knot)
+    const mouthGeo = new THREE.TorusKnotGeometry(1, 0.3, 64, 8);
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+    mouth.position.set(0, -3, 5);
+    headGroup.add(mouth);
+
+    // Wings (Fan shape behind)
+    for (let i = 0; i < 12; i++) {
+        const wingGeo = new THREE.BoxGeometry(20, 0.5, 4);
+        const wingMat = new THREE.MeshStandardMaterial({ color: 0xff003c });
+        const wing = new THREE.Mesh(wingGeo, wingMat);
+        wing.position.set(0, 0, -2);
+        wing.rotation.z = (Math.PI / 6) * i;
+        headGroup.add(wing);
+    }
+
+    // Halo Rings
+    const ringGeo = new THREE.TorusGeometry(10, 0.5, 16, 100);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    headGroup.add(ring);
+
+    headGroup.userData = { isCreature: true, speed: 0.5 };
+    scene.add(headGroup);
+
+    // 2. Floating "Watchers" (Smaller eyes everywhere)
+    const watcherGeo = new THREE.SphereGeometry(1, 16, 16);
+    const watcherMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const irisGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    const irisMat = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+
+    for (let i = 0; i < 20; i++) {
+        const wrapper = new THREE.Group();
+        const eye = new THREE.Mesh(watcherGeo, watcherMat);
+        const iris = new THREE.Mesh(irisGeo, irisMat);
+        iris.position.set(0, 0, 0.8);
+        wrapper.add(eye);
+        wrapper.add(iris);
+
+        wrapper.position.set(
+            (Math.random() - 0.5) * 100,
+            Math.random() * 20 + 5,
+            (Math.random() - 0.5) * 100
+        );
+
+        wrapper.lookAt(0, 0, 0); // Always watch center
+        wrapper.userData = { isWatcher: true, bobOffset: Math.random() * 100 };
+        scene.add(wrapper);
+    }
+}
+
+function createPlayer() {
+    // Placeholder Cube Player
+    const geometry = new THREE.BoxGeometry(1, 2, 1);
+    const material = new THREE.MeshStandardMaterial({ color: 0xff003c, emissive: 0x330000 });
+    player = new THREE.Mesh(geometry, material);
+    player.position.y = 1;
+    player.castShadow = true;
+    scene.add(player);
+
+    playerVelocity = new THREE.Vector3();
+}
+
+function updatePlayer(dt) {
+    if (!player) return;
+
+    const speed = keyState['ShiftLeft'] ? 10 : 5;
+    const moveDir = new THREE.Vector3();
+
+    if (keyState['KeyW']) moveDir.z -= 1;
+    if (keyState['KeyS']) moveDir.z += 1;
+    if (keyState['KeyA']) moveDir.x -= 1;
+    if (keyState['KeyD']) moveDir.x += 1;
+
+    moveDir.normalize();
+
+    // Orient input to camera
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    camDir.y = 0;
+    camDir.normalize();
+
+    const camRight = new THREE.Vector3();
+    camRight.crossVectors(camDir, new THREE.Vector3(0, 1, 0));
+
+    const finalDir = new THREE.Vector3();
+    finalDir.addScaledVector(camDir, -moveDir.z); // -z because camera looks down negative z
+    finalDir.addScaledVector(camRight, moveDir.x);
+
+    if (finalDir.lengthSq() > 0) {
+        player.position.addScaledVector(finalDir, speed * dt);
+
+        // Rotate player to face direction
+        player.lookAt(player.position.clone().add(finalDir));
+    }
+
+    // Follow camera slightly
+    controls.target.copy(player.position);
+}
+
+function updateCreatures(dt, time) {
+    scene.traverse((obj) => {
+        if (obj.userData.isCreature) {
+            // Totem animation
+            obj.rotation.y = Math.sin(time * 0.5) * 0.2;
+            obj.position.y = 15 + Math.sin(time) * 2;
+        }
+        if (obj.userData.isWatcher) {
+            // Watchers bobbing
+            obj.position.y += Math.sin(time * 2 + obj.userData.bobOffset) * 0.05 * dt;
+            obj.lookAt(player.position); // Stare at player
+        }
+    });
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
 function updateCoins(dt) {
     scene.traverse((object) => {
         if (object.userData && object.userData.isCoin) {
@@ -271,7 +403,19 @@ function updateCoins(dt) {
     });
 }
 
+function animate() {
+    requestAnimationFrame(animate);
 
+    delta = clock.getDelta();
+    const elapsedTime = clock.getElapsedTime();
+
+    updateCoins(delta);
+    updateCreatures(delta, elapsedTime);
+    updatePlayer(delta);
+    controls.update();
+
+    renderer.render(scene, camera);
+}
 
 // Start
 init();
