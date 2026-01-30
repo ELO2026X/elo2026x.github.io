@@ -192,6 +192,7 @@ function animate() {
 
     delta = clock.getDelta();
 
+    updateCoins(delta);
     updatePlayer(delta);
     controls.update();
 
