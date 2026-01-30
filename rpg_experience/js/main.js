@@ -305,76 +305,134 @@ function createPsychedelicCreatures() {
 }
 
 function createPlayer() {
-    // COMPOSITE PLAYER MODEL (CYBER-BOT)
+    // ADVANCED HUMANOID RIG (Capsule/Sphere Blending)
     player = new THREE.Group();
     player.position.y = 0;
 
-    const armorColor = 0xff003c;
-    const jointColor = 0x222222;
-    const visorColor = 0x00f3ff;
+    // Materials
+    const armorColor = 0xe0e0e0; // White armor
+    const jointColor = 0x222222; // Dark inner suit
+    const visorColor = 0x00f3ff; // Cyan glowing visor
 
-    const armorMat = new THREE.MeshStandardMaterial({ color: armorColor, roughness: 0.3, metalness: 0.8 });
-    const jointMat = new THREE.MeshStandardMaterial({ color: jointColor, roughness: 0.8 });
-    const visorMat = new THREE.MeshStandardMaterial({ color: visorColor, emissive: visorColor, emissiveIntensity: 2 });
+    // Smooth shading materials
+    const skinMat = new THREE.MeshStandardMaterial({
+        color: armorColor,
+        roughness: 0.4,
+        metalness: 0.5
+    });
+    const jointMat = new THREE.MeshStandardMaterial({
+        color: jointColor,
+        roughness: 0.7
+    });
+    const visorMat = new THREE.MeshStandardMaterial({
+        color: visorColor,
+        emissive: visorColor,
+        emissiveIntensity: 3
+    });
 
-    // 1. TORSO
-    const torsoGeo = new THREE.BoxGeometry(1, 1.5, 0.6);
-    const torso = new THREE.Mesh(torsoGeo, armorMat);
-    torso.position.y = 1.7; // Center of torso
-    torso.castShadow = true;
-    player.add(torso);
+    // --- SKELETAL HIERARCHY ---
 
-    // 2. HEAD
+    // 1. PELVIS (Root of the body)
+    // Using a sphere to act as the central joint
+    const pelvisGeo = new THREE.SphereGeometry(0.35, 32, 32);
+    const pelvis = new THREE.Mesh(pelvisGeo, jointMat);
+    pelvis.position.y = 1.0; // Hip height
+    pelvis.castShadow = true;
+    player.add(pelvis);
+
+    // 2. TORSO (Capsule)
+    const torsoGeo = new THREE.CapsuleGeometry(0.35, 0.7, 4, 16);
+    const torso = new THREE.Mesh(torsoGeo, skinMat);
+    torso.position.y = 0.5; // Offset from pelvis UP
+    pelvis.add(torso); // Torso attached to pelvis
+
+    // 3. HEAD NECK joint
+    const neckGeo = new THREE.SphereGeometry(0.25, 32, 32);
+    const neck = new THREE.Mesh(neckGeo, jointMat);
+    neck.position.y = 0.5; // Top of torso
+    torso.add(neck);
+
+    // HEAD MESH
     const headGroup = new THREE.Group();
-    headGroup.position.set(0, 2.7, 0); // On top of torso
+    headGroup.position.y = 0.2;
+    neck.add(headGroup);
 
-    const helmetGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-    const helmet = new THREE.Mesh(helmetGeo, armorMat);
-    helmet.castShadow = true;
-    headGroup.add(helmet);
+    // Face/Helmet shape (Rounded Box for sci-fi look)
+    // Manually creating a "sculpted" head using multiple meshes
+    const skullGeo = new THREE.SphereGeometry(0.35, 32, 32);
+    const skull = new THREE.Mesh(skullGeo, skinMat);
+    headGroup.add(skull);
 
-    const visorGeo = new THREE.BoxGeometry(0.6, 0.3, 0.1);
+    const visorGeo = new THREE.CapsuleGeometry(0.15, 0.4, 4, 16);
     const visor = new THREE.Mesh(visorGeo, visorMat);
-    visor.position.set(0, 0, 0.4); // Front of face
+    visor.rotation.z = Math.PI / 2;
+    visor.position.set(0, 0, 0.25); // Eye level
     headGroup.add(visor);
-    player.add(headGroup);
 
-    // 3. ARMS
-    const createLimb = (x, y, z, w, h, d, mat) => {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        mesh.position.set(x, y, z);
-        mesh.castShadow = true;
-        return mesh;
-    };
+    // --- LIMBS Helper ---
+    function createLimb(width, length, material, jointMat) {
+        const limbGroup = new THREE.Group();
 
-    const leftShoulder = createLimb(-0.7, 2.2, 0, 0.4, 0.4, 0.4, jointMat);
-    player.add(leftShoulder);
-    const rightShoulder = createLimb(0.7, 2.2, 0, 0.4, 0.4, 0.4, jointMat);
-    player.add(rightShoulder);
+        // Joint (Shoulder/Hip)
+        const jointGeo = new THREE.SphereGeometry(width, 32, 32);
+        const joint = new THREE.Mesh(jointGeo, jointMat);
+        limbGroup.add(joint);
 
-    // Arms attached to shoulders
-    const leftArm = createLimb(-0.7, 1.6, 0, 0.3, 1.0, 0.3, armorMat);
-    player.add(leftArm);
-    const rightArm = createLimb(0.7, 1.6, 0, 0.3, 1.0, 0.3, armorMat);
-    player.add(rightArm);
+        // Bone (Capsule)
+        const boneGeo = new THREE.CapsuleGeometry(width * 0.85, length, 4, 16);
+        const bone = new THREE.Mesh(boneGeo, material);
+        // Position capsule so joint is at the top
+        bone.position.y = -length / 2;
+        limbGroup.add(bone);
 
-    // 4. LEGS
-    const leftThigh = createLimb(-0.3, 0.8, 0, 0.35, 1.0, 0.35, jointMat);
-    player.add(leftThigh);
-    const rightThigh = createLimb(0.3, 0.8, 0, 0.35, 1.0, 0.35, jointMat);
-    player.add(rightThigh);
+        return limbGroup;
+    }
 
-    const leftBoot = createLimb(-0.3, 0.15, 0.1, 0.4, 0.3, 0.6, armorMat);
-    player.add(leftBoot);
-    const rightBoot = createLimb(0.3, 0.15, 0.1, 0.4, 0.3, 0.6, armorMat);
-    player.add(rightBoot);
+    // 4. ARMS
+    const armLength = 0.6;
+    const armWidth = 0.12;
+
+    // Shoulders attached to High Torso
+    const shoulderHeight = 0.3;
+    const shoulderWidth = 0.45;
+
+    // Left Arm
+    const leftArm = createLimb(armWidth, armLength, skinMat, jointMat);
+    leftArm.position.set(-shoulderWidth, shoulderHeight, 0);
+    torso.add(leftArm);
+
+    // Right Arm
+    const rightArm = createLimb(armWidth, armLength, skinMat, jointMat);
+    rightArm.position.set(shoulderWidth, shoulderHeight, 0);
+    torso.add(rightArm);
+
+    // 5. LEGS
+    const legLength = 0.7;
+    const legWidth = 0.15;
+
+    // Left Leg
+    const leftLeg = createLimb(legWidth, legLength, skinMat, jointMat);
+    leftLeg.position.set(-0.2, 0, 0); // Offset from Pelvis center
+    pelvis.add(leftLeg);
+
+    // Right Leg
+    const rightLeg = createLimb(legWidth, legLength, skinMat, jointMat);
+    rightLeg.position.set(0.2, 0, 0);
+    pelvis.add(rightLeg);
 
     scene.add(player);
     playerVelocity = new THREE.Vector3();
 
-    // Store references for animation (simple walk cycle later?)
+    // Rigging Data
     player.userData = {
-        leftArm, rightArm, leftThigh, rightThigh
+        pelvis,
+        torso,
+        neck,
+        leftArm,
+        rightArm,
+        leftLeg,
+        rightLeg,
+        headGroup
     };
 }
 
@@ -383,7 +441,9 @@ function updatePlayer(dt) {
 
     const speed = keyState['ShiftLeft'] ? 10 : 5;
     const moveDir = new THREE.Vector3();
+    let isMoving = false;
 
+    // Movement Logic
     if (keyState['KeyW']) moveDir.z -= 1;
     if (keyState['KeyS']) moveDir.z += 1;
     if (keyState['KeyA']) moveDir.x -= 1;
@@ -391,12 +451,11 @@ function updatePlayer(dt) {
 
     moveDir.normalize();
 
-    // Orient input to camera
+    // Camera Orientation
     const camDir = new THREE.Vector3();
     camera.getWorldDirection(camDir);
     camDir.y = 0;
     camDir.normalize();
-
     const camRight = new THREE.Vector3();
     camRight.crossVectors(camDir, new THREE.Vector3(0, 1, 0));
 
@@ -404,31 +463,60 @@ function updatePlayer(dt) {
     finalDir.addScaledVector(camDir, -moveDir.z);
     finalDir.addScaledVector(camRight, moveDir.x);
 
-    let isMoving = false;
+    // --- PROCEDURAL ANIMATION SYSTEM ---
+    const rig = player.userData;
+    const time = Date.now() * 0.01; // Animation time
 
     if (finalDir.lengthSq() > 0) {
         isMoving = true;
         player.position.addScaledVector(finalDir, speed * dt);
         player.lookAt(player.position.clone().add(finalDir));
 
-        // Simple bobbing for walk animation
-        const time = Date.now() * 0.01;
-        player.userData.leftArm.rotation.x = Math.sin(time) * 0.5;
-        player.userData.rightArm.rotation.x = -Math.sin(time) * 0.5;
-        player.userData.leftThigh.rotation.x = -Math.sin(time) * 0.5;
-        player.userData.rightThigh.rotation.x = Math.sin(time) * 0.5;
+        const runFactor = keyState['ShiftLeft'] ? 1.5 : 1.0;
+        const animSpeed = time * runFactor;
+
+        // 1. Leg Swing
+        rig.leftLeg.rotation.x = Math.sin(animSpeed) * 0.8;
+        rig.rightLeg.rotation.x = Math.sin(animSpeed + Math.PI) * 0.8;
+
+        // Knee bend (simple inverse kinematic simulation)
+        // If leg is moving back, bend knee (not implemented in simple rig, but we can fake drag)
+
+        // 2. Arm Swing (Opposite to legs)
+        rig.leftArm.rotation.x = Math.sin(animSpeed + Math.PI) * 0.6;
+        rig.rightArm.rotation.x = Math.sin(animSpeed) * 0.6;
+
+        // 3. Torso Twist
+        rig.torso.rotation.y = Math.sin(animSpeed) * 0.1;
+
+        // 4. Head Bob/Stabilization
+        rig.headGroup.rotation.y = Math.sin(animSpeed) * 0.05; // Look slightly side to side
+
+        // 5. Vertical Bob (Bounce)
+        rig.pelvis.position.y = 1.0 + Math.abs(Math.sin(animSpeed)) * 0.1;
+
     } else {
-        // Reset limbs
-        player.userData.leftArm.rotation.x = 0;
-        player.userData.rightArm.rotation.x = 0;
-        player.userData.leftThigh.rotation.x = 0;
-        player.userData.rightThigh.rotation.x = 0;
+        // IDLE STATE (Breathing)
+        const breath = Math.sin(time * 0.2);
+
+        // Reset rotation with interpolation (simple lerp)
+        const lerpRot = (obj, target) => { obj.rotation.x *= 0.9; };
+
+        lerpRot(rig.leftLeg);
+        lerpRot(rig.rightLeg);
+        lerpRot(rig.leftArm);
+        lerpRot(rig.rightArm);
+        rig.torso.rotation.y *= 0.9;
+
+        // Breathing animation
+        rig.torso.position.y = 0.5 + breath * 0.01;
+        rig.headGroup.rotation.x = breath * 0.05; // Nod slightly
+        rig.pelvis.position.y = 1.0; // Reset height
     }
 
-    // Follow camera slightly
+    // Camera Follow
     controls.target.copy(player.position);
-    // Keep camera at same relative distance
-    // (OrbitControls handles this mostly, but target update is key)
+    controls.target.y += 1; // Look at head/torso area
 }
 
 function updateCreatures(dt, time) {
