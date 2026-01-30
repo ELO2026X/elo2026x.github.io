@@ -54,12 +54,15 @@ function init() {
     scene.add(pointLightP);
 
     // 5. Environment (Skybox & Ground)
-    createEnvironment();
+    createDetailedEnvironment();
 
     // 6. Player Setup
     createPlayer();
 
-    // 7. Controls & Events
+    // 7. Audio System
+    setupAudio();
+
+    // 8. Controls & Events
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -75,116 +78,197 @@ function init() {
     animate();
 }
 
-function createEnvironment() {
-    // Ground - Infinite Grid aesthetic
-    const geometry = new THREE.PlaneGeometry(CONFIG.worldSize, CONFIG.worldSize);
+function setupAudio() {
+    // Audio Listener
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    // Global Audio Source
+    const sound = new THREE.Audio(listener);
+    const audioLoader = new THREE.AudioLoader();
+
+    // Load background music
+    // Note: User must place 'osamu_sato.mp3' in assets folder
+    audioLoader.load('../assets/osamu_sato.mp3', function (buffer) {
+        sound.setBuffer(buffer);
+        sound.setLoop(true);
+        sound.setVolume(0.5);
+        sound.play();
+    }, undefined, function (err) {
+        console.warn('Audio file not found: assets/osamu_sato.mp3');
+    });
+}
+
+function createDetailedEnvironment() {
+    // 1. SKY & ATMOSPHERE
+    // "Galaxy Moon" aesthetic
+    const moonGeo = new THREE.SphereGeometry(20, 32, 32);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moon.position.set(0, 50, -100);
+    scene.add(moon);
+
+    // Moon Glow
+    const moonLight = new THREE.PointLight(0xaaaaff, 0.5, 200);
+    moonLight.position.set(0, 50, -80);
+    scene.add(moonLight);
+
+    // 2. GROUND (Cobblestone-ish)
+    const geometry = new THREE.PlaneGeometry(CONFIG.worldSize, CONFIG.worldSize, 64, 64);
     const material = new THREE.MeshStandardMaterial({
-        color: CONFIG.colors.ground,
-        metalness: 0.8,
-        roughness: 0.2
+        color: 0x1a1a1a,
+        metalness: 0.2,
+        roughness: 0.8,
+        wireframe: false
     });
     const ground = new THREE.Mesh(geometry, material);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Grid Helper
-    const gridHelper = new THREE.GridHelper(CONFIG.worldSize, 50, CONFIG.colors.grid, 0x222222);
-    scene.add(gridHelper);
+    // 3. PROCEDURAL GOTHIC BUILDINGS
+    const buildingMat = new THREE.MeshStandardMaterial({ color: 0x2a2a35, roughness: 0.9 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x151520, roughness: 0.9 });
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 2 });
 
-    // Random Geometric "Buildings"
-    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-    const boxMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    for (let i = 0; i < 80; i++) {
+        const x = (Math.random() - 0.5) * CONFIG.worldSize * 0.9;
+        const z = (Math.random() - 0.5) * CONFIG.worldSize * 0.9;
 
-    for (let i = 0; i < 50; i++) {
-        const h = Math.random() * 10 + 2;
-        const mesh = new THREE.Mesh(boxGeo, boxMat);
-        mesh.position.set(
-            (Math.random() - 0.5) * CONFIG.worldSize * 0.8,
-            h / 2,
-            (Math.random() - 0.5) * CONFIG.worldSize * 0.8
-        );
-        mesh.scale.set(Math.random() * 5 + 2, h, Math.random() * 5 + 2);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
+        // Clear center area for spawn
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+
+        const width = Math.random() * 4 + 3;
+        const depth = Math.random() * 4 + 3;
+        const height = Math.random() * 15 + 10;
+
+        const bGroup = new THREE.Group();
+        bGroup.position.set(x, 0, z);
+
+        // Main Body
+        const bodyGeo = new THREE.BoxGeometry(width, height, depth);
+        const body = new THREE.Mesh(bodyGeo, buildingMat);
+        body.position.y = height / 2;
+        body.castShadow = true;
+        body.receiveShadow = true;
+        bGroup.add(body);
+
+        // Roof (Pyramid)
+        const roofHeight = 5;
+        const roofGeo = new THREE.ConeGeometry(Math.max(width, depth) * 0.8, roofHeight, 4);
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.position.y = height + roofHeight / 2;
+        roof.rotation.y = Math.PI / 4;
+        bGroup.add(roof);
+
+        // Windows (Randomly placed glowing planes)
+        for (let w = 0; w < 4; w++) {
+            if (Math.random() > 0.5) continue;
+            const winGeo = new THREE.PlaneGeometry(1, 2);
+            const win = new THREE.Mesh(winGeo, windowMat);
+
+            // Simple placement logic (front face or side face)
+            if (Math.random() > 0.5) {
+                win.position.set(0, (Math.random() * height * 0.6) + 2, depth / 2 + 0.1);
+            } else {
+                win.position.set(width / 2 + 0.1, (Math.random() * height * 0.6) + 2, 0);
+                win.rotation.y = Math.PI / 2;
+            }
+            bGroup.add(win);
+        }
+
+        scene.add(bGroup);
     }
 
-    // Green Pipes (Procedural)
-    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x00aa00, roughness: 0.4 });
-    for (let i = 0; i < 5; i++) {
+    // 4. PIPES & BLOCKS (Mario Elements)
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x00aa00, roughness: 0.2, metalness: 0.5 });
+    for (let i = 0; i < 8; i++) {
         const pipeGroup = new THREE.Group();
-        const tube = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 3, 16), pipeMat);
-        tube.position.y = 1.5;
-        const rim = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.8, 16), pipeMat);
-        rim.position.y = 2.8;
+        const tube = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 4, 32), pipeMat);
+        tube.position.y = 2;
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 1, 32), pipeMat);
+        rim.position.y = 3.5;
 
         pipeGroup.add(tube);
         pipeGroup.add(rim);
 
         pipeGroup.position.set(
-            (Math.random() - 0.5) * 40,
+            (Math.random() - 0.5) * 60,
             0,
-            (Math.random() - 0.5) * 40
+            (Math.random() - 0.5) * 60
         );
+        // Ensure not in center
+        if (pipeGroup.position.length() < 10) pipeGroup.position.x += 20;
+
         pipeGroup.traverse(c => { if (c.isMesh) c.castShadow = c.receiveShadow = true; });
         scene.add(pipeGroup);
     }
-}
 
-function createPlayer() {
-    // Placeholder Cube Player
-    const geometry = new THREE.BoxGeometry(1, 2, 1);
-    const material = new THREE.MeshStandardMaterial({ color: 0xff003c, emissive: 0x330000 });
-    player = new THREE.Mesh(geometry, material);
-    player.position.y = 1;
-    player.castShadow = true;
-    scene.add(player);
+    // Floating Blocks & Coins
+    const blockMat = new THREE.MeshStandardMaterial({ color: 0xcc5500, metalness: 0.4 }); // Brick color
+    const qBlockMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xaa8800, emissiveIntensity: 0.2 }); // Gold
+    const coinMat = new THREE.MeshStandardMaterial({ color: 0xffff00, metalness: 1, roughness: 0.2, emissive: 0xaa8800 });
 
-    playerVelocity = new THREE.Vector3();
-}
+    for (let i = 0; i < 40; i++) {
+        const type = Math.random();
+        const pos = new THREE.Vector3(
+            (Math.random() - 0.5) * 80,
+            Math.random() * 10 + 5,
+            (Math.random() - 0.5) * 80
+        );
 
-function updatePlayer(dt) {
-    if (!player) return;
+        if (type > 0.6) {
+            // Brick Block
+            const block = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), blockMat);
+            block.position.copy(pos);
+            block.castShadow = true;
+            scene.add(block);
+        } else if (type > 0.3) {
+            // ? Block
+            const qBlock = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), qBlockMat);
+            qBlock.position.copy(pos);
+            qBlock.castShadow = true;
 
-    const speed = keyState['ShiftLeft'] ? 10 : 5;
-    const moveDir = new THREE.Vector3();
-
-    if (keyState['KeyW']) moveDir.z -= 1;
-    if (keyState['KeyS']) moveDir.z += 1;
-    if (keyState['KeyA']) moveDir.x -= 1;
-    if (keyState['KeyD']) moveDir.x += 1;
-
-    moveDir.normalize();
-
-    // Orient input to camera
-    const camDir = new THREE.Vector3();
-    camera.getWorldDirection(camDir);
-    camDir.y = 0;
-    camDir.normalize();
-
-    const camRight = new THREE.Vector3();
-    camRight.crossVectors(camDir, new THREE.Vector3(0, 1, 0));
-
-    const finalDir = new THREE.Vector3();
-    finalDir.addScaledVector(camDir, -moveDir.z); // -z because camera looks down negative z
-    finalDir.addScaledVector(camRight, moveDir.x);
-
-    if (finalDir.lengthSq() > 0) {
-        player.position.addScaledVector(finalDir, speed * dt);
-
-        // Rotate player to face direction
-        player.lookAt(player.position.clone().add(finalDir));
+            // Add a simple light to it
+            const qLight = new THREE.PointLight(0xffaa00, 1, 10);
+            qLight.position.copy(pos);
+            scene.add(qLight);
+            scene.add(qBlock);
+        } else {
+            // Coin
+            const coin = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.2, 16), coinMat);
+            coin.rotation.x = Math.PI / 2; // Flat facing player initially
+            coin.position.copy(pos);
+            coin.userData = { isCoin: true, rotSpeed: Math.random() * 2 + 1 };
+            scene.add(coin);
+        }
     }
 
-    // Follow camera slightly
-    controls.target.copy(player.position);
+    // 5. PARTICLES (Glitch/Magic)
+    const particleCount = 1500;
+    const particlesGeo = new THREE.BufferGeometry();
+    const posArray = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 150;
+    }
+    particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particlesMat = new THREE.PointsMaterial({
+        size: 0.2,
+        color: 0x00f3ff,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+    });
+    const particles = new THREE.Points(particlesGeo, particlesMat);
+    scene.add(particles);
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+function updateCoins(dt) {
+    scene.traverse((object) => {
+        if (object.userData && object.userData.isCoin) {
+            object.rotation.z += dt * object.userData.rotSpeed;
+        }
+    });
 }
 
 function animate() {
