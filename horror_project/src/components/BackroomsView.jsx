@@ -15,12 +15,13 @@ const BackroomsView = ({ onExit }) => {
     const containerRef = useRef();
     const [sanity, setSanity] = useState(100);
     const [audioEnabled, setAudioEnabled] = useState(false);
-    const [status, setStatus] = useState("OBJECTIVE: FIND 3 RUSTY KEYS");
+    const [status, setStatus] = useState("Objective: Find 3 Gifts"); // Updated status text
     const [keysCollected, setKeysCollected] = useState(0);
     const [currentThought, setCurrentThought] = useState(null);
     const [entityInfo, setEntityInfo] = useState(null);
     const [isManifesting, setIsManifesting] = useState(false);
     const [gameOver, setGameOver] = useState(false);
+    const [socialBattery, setSocialBattery] = useState(100); // New state
 
     // Refs for mutable state in animation loop
     const audioRef = useRef(null);
@@ -29,6 +30,12 @@ const BackroomsView = ({ onExit }) => {
     const keysRef = useRef([]); // Array of key meshes
     const collectedKeysRef = useRef(0);
     const jumpScareRef = useRef(false);
+
+    // Movement & Smile State
+    const moveState = useRef({
+        forward: false, backward: false, left: false, right: false,
+        smile: false
+    });
 
     // Mutable Maze Grid
     const mazeGridRef = useRef([
@@ -50,6 +57,29 @@ const BackroomsView = ({ onExit }) => {
 
     useEffect(() => {
         if (!containerRef.current) return;
+
+        // --- Input Handling ---
+        const handleKeyDown = (e) => {
+            switch (e.code) {
+                case 'KeyW': moveState.current.forward = true; break;
+                case 'KeyS': moveState.current.backward = true; break;
+                case 'KeyA': moveState.current.left = true; break;
+                case 'KeyD': moveState.current.right = true; break;
+                case 'Space': moveState.current.smile = true; break;
+            }
+        };
+        const handleKeyUp = (e) => {
+            switch (e.code) {
+                case 'KeyW': moveState.current.forward = false; break;
+                case 'KeyS': moveState.current.backward = false; break;
+                case 'KeyA': moveState.current.left = false; break;
+                case 'KeyD': moveState.current.right = false; break;
+                case 'Space': moveState.current.smile = false; break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
 
         const baseUrl = import.meta.env.BASE_URL;
         const textureLoader = new THREE.TextureLoader();
@@ -507,39 +537,46 @@ const BackroomsView = ({ onExit }) => {
     }, [audioEnabled]);
 
     return (
-        <div ref={containerRef} className="fixed inset-0 w-full h-full bg-black z-50 overflow-hidden cursor-none">
-            {/* JUMP SCARE OVERLAY */}
-            {gameOver && (
-                <div className="absolute inset-0 z-[100] bg-black flex items-center justify-center animate-vibrate">
-                    <img src={`${import.meta.env.BASE_URL}images/nano_banana.png`} className="w-full h-full object-contain animate-pulse-fast filter contrast-150 brightness-50" />
-                    <h1 className="absolute text-red-600 font-black text-9xl animate-ping">CAUGHT</h1>
-                </div>
-            )}
+        <div className="relative w-full h-screen bg-black overflow-hidden font-mono select-none">
+            <div ref={containerRef} className="w-full h-full" />
 
-            {/* HUD */}
-            <div className="absolute top-8 left-8 z-50 pointer-events-none select-none mix-blend-difference">
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-xl font-black text-red-600 tracking-widest uppercase">Vital Systems</h2>
-                    <div className="h-2 w-48 bg-gray-900 border border-red-900/50">
-                        <div className="h-full bg-red-600" style={{ width: `${sanity}%` }} />
+            {/* UI HUD */}
+            <div className="absolute top-0 left-0 w-full p-8 pointer-events-none mix-blend-difference z-10">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h1 className="text-4xl font-bold text-yellow-500 tracking-widest drop-shadow-md">PROTOCOL: BIRTHDAY</h1>
+                        <p className="text-xl text-yellow-200 mt-2 animate-pulse">{status}</p>
                     </div>
-                    <div className="mt-4 flex items-center gap-2 text-yellow-500">
-                        <Key className="w-6 h-6" />
-                        <span className="text-2xl font-mono">{keysCollected} / 3 KEYS</span>
+                    <div className="text-right">
+                        {/* Social Battery */}
+                        <div className="text-2xl text-yellow-500 font-bold mb-2">SOCIAL BATTERY</div>
+                        <div className="w-64 h-6 bg-gray-900 border-2 border-yellow-700">
+                            <div
+                                className="h-full bg-yellow-500 transition-all duration-200"
+                                style={{ width: `${socialBattery}%` }}
+                            />
+                        </div>
+
+                        {/* Smile Indicator */}
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <span className="text-sm text-yellow-300">HOLD [SPACE] TO WIDEN SMILE</span>
+                            <div className={`w-8 h-8 rounded-full border-2 ${moveState.current?.smile ? 'bg-green-500 border-green-300' : 'bg-transparent border-red-500'}`} />
+                        </div>
+
+                        <div className="mt-4 text-xl text-yellow-200">GIFTS OPENED: {keysCollected} / 3</div>
                     </div>
-                    <p className="text-orange-500 font-mono mt-2 animate-pulse">{status}</p>
                 </div>
             </div>
 
-            {/* Thought Overlay */}
-            {currentThought && (
-                <div className="absolute bottom-32 left-0 w-full text-center z-50 pointer-events-none">
-                    <p className="text-xl text-gray-200 font-serif italic tracking-wide bg-black/50 p-4 inline-block rounded">
-                        "{currentThought}"
-                    </p>
+            {/* Jump Scare Overlay */}
+            {jumpScareRef.current && (
+                <div className="absolute inset-0 bg-red-600 mix-blend-multiply z-20 flex items-center justify-center animate-ping">
+                    <h1 className="text-9xl font-black text-black">RUDE!</h1>
                 </div>
             )}
 
+            {/* Scanlines */}
+            <div className="absolute inset-0 pointer-events-none opacity-20 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] background-size-cover mix-blend-overlay"></div>
             {/* Action Buttons */}
             <div className="absolute top-8 right-8 z-50 flex flex-col gap-4 pointer-events-auto">
                 <button
