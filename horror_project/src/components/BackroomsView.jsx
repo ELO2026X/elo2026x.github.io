@@ -7,13 +7,17 @@ import { Skull, Eye, Volume2, VolumeX, AlertCircle, ArrowLeft, Move, Info, Key, 
 const createScarecrow = () => {
     const group = new THREE.Group();
 
+    // Scaling Up significantly (2x Base)
+    const baseScale = 2.0;
+    group.scale.set(baseScale, baseScale, baseScale);
+
     // Post (Elongated)
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 1 });
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.15, 6, 0.15), woodMat);
     post.position.y = 3.0;
     group.add(post);
 
-    // Crossbar (Wide)
+    // Crossbar
     const crossbar = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.15, 0.15), woodMat);
     crossbar.position.y = 4.8;
     crossbar.rotation.z = (Math.random() - 0.5) * 0.4;
@@ -21,13 +25,13 @@ const createScarecrow = () => {
 
     // Head (Burlap Sack - Blocky)
     const sackMat = new THREE.MeshStandardMaterial({ color: 0xc2b280, roughness: 1 });
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.5), sackMat);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.7), sackMat); // Bigger head
     head.position.y = 5.4;
     group.add(head);
 
     // Eyes (X Shape)
     const xMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const xGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.3);
+    const xGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.4);
 
     const createEye = (x, y, z) => {
         const eyeGroup = new THREE.Group();
@@ -41,20 +45,20 @@ const createScarecrow = () => {
         return eyeGroup;
     };
 
-    group.add(createEye(-0.15, 5.45, 0.26));
-    group.add(createEye(0.15, 5.45, 0.26));
+    group.add(createEye(-0.2, 5.45, 0.36));
+    group.add(createEye(0.2, 5.45, 0.36));
 
     // Stitched Smile
-    const smileCurve = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.02, 8, 8, Math.PI), xMat);
+    const smileCurve = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 8, Math.PI), xMat);
     smileCurve.rotation.x = Math.PI;
-    smileCurve.position.set(0, 5.25, 0.26);
+    smileCurve.position.set(0, 5.2, 0.36);
     group.add(smileCurve);
 
-    // Tattered Coat
-    const clothGeo = new THREE.ConeGeometry(0.9, 4.0, 4, 1, true);
+    // Tattered Coat (Longer)
+    const clothGeo = new THREE.ConeGeometry(1.2, 4.5, 5, 1, true);
     const clothMat = new THREE.MeshStandardMaterial({ color: 0x4a3c31, side: THREE.DoubleSide, roughness: 1 });
     const coat = new THREE.Mesh(clothGeo, clothMat);
-    coat.position.y = 3.0;
+    coat.position.y = 3.2;
     coat.scale.z = 0.5;
     group.add(coat);
 
@@ -93,21 +97,19 @@ const createRuinsColumn = () => {
     base.position.y = 0.5;
     group.add(base);
 
-    // Column Segments (Broken)
+    // Column Segments
     const height = 2 + Math.random() * 4;
     const segments = Math.floor(height);
     for (let i = 0; i < segments; i++) {
         const geo = new THREE.CylinderGeometry(0.6, 0.6, 1, 8);
         const seg = new THREE.Mesh(geo, stoneMat);
         seg.position.y = 1.5 + i;
-        // Offset slightly for "ruined" look
         seg.position.x = (Math.random() - 0.5) * 0.1;
         seg.position.z = (Math.random() - 0.5) * 0.1;
         seg.rotation.y = Math.random() * Math.PI;
         group.add(seg);
 
         if (Math.random() > 0.6) {
-            // Add Vine Ring
             const vine = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.05, 4, 6), vineMat);
             vine.rotation.x = Math.PI / 2;
             vine.position.y = 1.5 + i;
@@ -116,7 +118,6 @@ const createRuinsColumn = () => {
         }
     }
 
-    // Topper (Maybe broken)
     if (Math.random() > 0.3) {
         const top = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 1.6), stoneMat);
         top.position.y = 1.5 + segments;
@@ -161,10 +162,9 @@ const BackroomsView = ({ onExit }) => {
     const cellSize = 10;
     const validSpawnPoints = useRef([]);
 
-    // Need separate spawn points for separate levels actually
-    // But for simplicity we'll just check collision against the *active* group content
-    // and rely on the fact that we spawn entities in valid spots *during generation*
-    // For random spawning later (jumpscare teleport), we need lists.
+    // Check local storage for high score? Nah, Keep it simple.
+
+    // Spawn Lists
     const partySpawns = useRef([]);
     const cornSpawns = useRef([]);
     const ruinsSpawns = useRef([]);
@@ -175,7 +175,6 @@ const BackroomsView = ({ onExit }) => {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const ctx = new AudioContext();
 
-        // Dark Drone
         const droneOsc = ctx.createOscillator();
         droneOsc.type = 'sawtooth';
         droneOsc.frequency.value = 50;
@@ -189,7 +188,6 @@ const BackroomsView = ({ onExit }) => {
         droneGain.connect(ctx.destination);
         droneOsc.start();
 
-        // Screech
         const screamOsc = ctx.createOscillator();
         const screamGain = ctx.createGain();
         screamGain.gain.value = 0;
@@ -203,7 +201,7 @@ const BackroomsView = ({ onExit }) => {
 
     const startGame = (level) => {
         setIsInMenu(false);
-        initAudio(); // User interaction trigger
+        initAudio();
         pendingLevelSwitch.current = level;
     };
     const pendingLevelSwitch = useRef(null);
@@ -211,12 +209,35 @@ const BackroomsView = ({ onExit }) => {
     useEffect(() => {
         if (!containerRef.current) return;
 
+        // Pointer Lock & Mouse Look
+        document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
+        const handleClick = () => {
+            if (!isInMenu && !gameOver) containerRef.current.requestPointerLock();
+        };
+        const handleMouseMove = (e) => {
+            if (document.pointerLockElement === containerRef.current) {
+                // Standard FPS: Y-axis is Yaw (World Up), X-axis is Pitch (Local Right)
+                sceneRef.current.camera.rotation.y -= e.movementX * 0.002;
+                sceneRef.current.camera.rotation.x -= e.movementY * 0.002;
+                // Clamp Pitch
+                sceneRef.current.camera.rotation.x = Math.max(-1.5, Math.min(1.5, sceneRef.current.camera.rotation.x));
+                // Ensure Z is 0 (No roll)
+                sceneRef.current.camera.rotation.z = 0;
+                // NOTE: ThreeJS camera rotation order is usually XYZ, which might cause gimbal lock issues if we aren't careful.
+                // Ideally we use a Pitch Object and a Yaw Object.
+                // For simplicity in this quick implementation, direct rotation is often "Okay" if Z is locked, 
+                // but proper FPS uses: PlayerObject(Yaw) -> Camera(Pitch).
+                // Let's stick to direct camera manipulation but force order YXZ to fix gimbal lock.
+                sceneRef.current.camera.rotation.order = "YXZ";
+            }
+        };
+
         const handleKeyDown = (e) => {
             switch (e.code) {
                 case 'KeyW': moveState.current.forward = true; break;
                 case 'KeyS': moveState.current.backward = true; break;
-                case 'KeyA': moveState.current.left = true; break;
-                case 'KeyD': moveState.current.right = true; break;
+                case 'KeyA': moveState.current.left = true; break; // Strafe Left
+                case 'KeyD': moveState.current.right = true; break; // Strafe Right
                 case 'Space': moveState.current.smile = true; break;
                 case 'ShiftLeft':
                 case 'ShiftRight': moveState.current.run = true; break;
@@ -233,8 +254,11 @@ const BackroomsView = ({ onExit }) => {
                 case 'ShiftRight': moveState.current.run = false; break;
             }
         };
+
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
+        document.addEventListener('mousemove', handleMouseMove);
+        containerRef.current.addEventListener('click', handleClick);
 
         // INIT THREE
         const baseUrl = import.meta.env.BASE_URL;
@@ -255,10 +279,12 @@ const BackroomsView = ({ onExit }) => {
 
         const scene = new THREE.Scene();
         sceneRef.current = scene;
-        scene.background = new THREE.Color(0x332200);
-        scene.fog = new THREE.FogExp2(0x443300, 0.03);
+        scene.rotation.order = "YXZ"; // Not scene, camera needs this.
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.rotation.order = "YXZ"; // Critical for FPS
+        sceneRef.current.camera = camera; // Hack to access in MouseMove
+
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.domElement.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; filter: contrast(1.1) saturate(1.2);';
@@ -351,27 +377,23 @@ const BackroomsView = ({ onExit }) => {
             });
         });
 
-        // --- RUINS BUILD (Procedural Grid) ---
-        // Open layout: 20x20, sparsely populated
+        // --- RUINS BUILD ---
         const ruinsSize = 20;
-        const ruinsCell = 15; // Bigger cells
+        const ruinsCell = 15;
         for (let r = 0; r < ruinsSize; r++) {
             for (let c = 0; c < ruinsSize; c++) {
                 const x = c * ruinsCell;
                 const z = r * ruinsCell;
 
-                // Floor
                 const rFloor = new THREE.Mesh(new THREE.PlaneGeometry(ruinsCell, ruinsCell), stoneFloorMat);
                 rFloor.rotation.x = -Math.PI / 2;
                 rFloor.position.set(x, -4, z);
-                // Add Noise to rotation for uneven ground
                 rFloor.rotation.x += (Math.random() - 0.5) * 0.05;
                 rFloor.rotation.y += (Math.random() - 0.5) * 0.05;
                 ruinsGroupRef.current.add(rFloor);
 
-                // Border
                 const isEdge = r === 0 || r === ruinsSize - 1 || c === 0 || c === ruinsSize - 1;
-                const isObstacle = Math.random() > 0.8; // 20% obstacles (Sparse)
+                const isObstacle = Math.random() > 0.8;
 
                 if (isEdge || isObstacle) {
                     if (Math.random() > 0.5) {
@@ -380,18 +402,16 @@ const BackroomsView = ({ onExit }) => {
                         col.scale.set(1.5, 1.5, 1.5);
                         ruinsGroupRef.current.add(col);
 
-                        // Collider
                         const rColl = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 2), new THREE.MeshBasicMaterial({ visible: false }));
                         rColl.position.set(x, 0, z);
                         rColl.userData = { isBorder: true };
                         ruinsGroupRef.current.add(rColl);
                     } else {
-                        // Wall Debris
                         const w = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 8), stoneMat);
                         w.position.set(x, -3, z);
                         w.rotation.y = Math.random();
                         ruinsGroupRef.current.add(w);
-                        w.userData = { isBorder: true }; // Collidable-ish
+                        w.userData = { isBorder: true };
                     }
                 } else {
                     ruinsSpawns.current.push({ x, z });
@@ -400,15 +420,16 @@ const BackroomsView = ({ onExit }) => {
         }
 
 
-        // LIGHTING
-        const ambientLight = new THREE.AmbientLight(0xffaa00, 0.4);
+        // LIGHTING (Daylight Boost)
+        const ambientLight = new THREE.AmbientLight(0xffaa00, 1.0); // BRIGHT
         scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
         sunLight.position.set(50, 100, 50);
-        scene.add(sunLight); // Only impacts standard meshes if they use EnvMap, but improves overall shading
+        scene.add(sunLight);
 
-        const flashlight = new THREE.SpotLight(0xffddaa, 3.0, 80, Math.PI / 5, 0.4, 1);
+        // Flashlight (Ultra Bright)
+        const flashlight = new THREE.SpotLight(0xffddaa, 8.0, 120, Math.PI / 3, 0.4, 1);
         flashlight.position.set(0, 0, 0);
         flashlight.target.position.set(0, 0, -1);
         camera.add(flashlight);
@@ -427,19 +448,18 @@ const BackroomsView = ({ onExit }) => {
                 const k = new THREE.Mesh(keyGeo, keyMat);
                 k.position.set(pt.x, -2, pt.z);
                 k.userData = { type: 'key' };
-                group.add(k); // Add to specific level group
-                const l = new THREE.PointLight(0xffd700, 1, 5);
+                group.add(k);
+                const l = new THREE.PointLight(0xffd700, 2, 8);
                 l.position.set(pt.x, -2, pt.z);
                 group.add(l);
                 keysRef.current.push(k);
             }
         };
-        // Spawn keys for existing levels (we could clear them on switch, but lets just spawn all once)
         spawnKeys(partySpawns.current, partyGroupRef.current);
         spawnKeys(cornSpawns.current, cornfieldGroupRef.current);
         spawnKeys(ruinsSpawns.current, ruinsGroupRef.current);
 
-        // ENEMIES
+        // ENEMIES (BIGGER & SCARIER)
         const spawnMob = (type, list, group) => {
             if (list.length === 0) return;
             const pt = list[Math.floor(Math.random() * list.length)];
@@ -447,25 +467,32 @@ const BackroomsView = ({ onExit }) => {
             if (type === 'HOST') {
                 const mat = new THREE.SpriteMaterial({ map: hostTex, transparent: true });
                 mob = new THREE.Sprite(mat);
-                mob.scale.set(1.5, 3.5, 1);
-                mob.userData = { type, state: 'PATROL', level: 'PARTY' };
+                mob.scale.set(3.0, 7.0, 1); // Bigger Host
+                mob.userData = { type, state: 'PATROL', level: 'PARTY', spawnY: 0 };
             } else if (type === 'SCARECROW') {
                 mob = createScarecrow();
-                mob.userData = { type, state: 'FROZEN', level: 'CORNFIELD' };
+                mob.userData = { type, state: 'FROZEN', level: 'CORNFIELD', spawnY: 0 };
             } else {
-                // RUINS MOB (Minotaur Placeholder - Red Box with Horns)
+                // RUINS MINOTAUR (GIANT)
                 mob = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.BoxGeometry(1, 2.5, 1), new THREE.MeshStandardMaterial({ color: 0x550000 }));
-                body.position.y = -2.5;
+                const body = new THREE.Mesh(new THREE.BoxGeometry(3, 7, 3), new THREE.MeshStandardMaterial({ color: 0x550000, roughness: 0.5 })); // HUGE
+                body.position.y = -0.5;
                 mob.add(body);
-                const horn = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-                horn.position.set(0.3, -1.2, 0); horn.rotation.z = -0.5;
+
+                const head = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2.5), new THREE.MeshStandardMaterial({ color: 0x330000 }));
+                head.position.set(0, 3.5, 0.5);
+                mob.add(head);
+
+                const horn = new THREE.Mesh(new THREE.ConeGeometry(0.3, 2), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                horn.position.set(0.8, 4.5, 0.5); horn.rotation.z = -0.5;
                 mob.add(horn.clone());
-                horn.position.set(-0.3, -1.2, 0); horn.rotation.z = 0.5;
+                horn.position.set(-0.8, 4.5, 0.5); horn.rotation.z = 0.5;
                 mob.add(horn);
-                mob.userData = { type, state: 'CHASE', level: 'RUINS' };
+
+                mob.scale.set(1.5, 1.5, 1.5); // 1.5x Multiplier on top of Giant Geo
+                mob.userData = { type, state: 'CHASE', level: 'RUINS', spawnY: 2 };
             }
-            mob.position.set(pt.x, type === 'HOST' ? 0 : -1, pt.z);
+            mob.position.set(pt.x, mob.userData.spawnY, pt.z);
             group.add(mob);
             enemiesRef.current.push(mob);
         };
@@ -484,9 +511,9 @@ const BackroomsView = ({ onExit }) => {
                 setStatus("Objective: Find 3 Gifts");
                 setHint("");
                 scene.background = new THREE.Color(0x332200);
-                scene.fog = new THREE.FogExp2(0x443300, 0.03);
+                scene.fog = new THREE.FogExp2(0x443300, 0.02);
                 ambientLight.color.setHex(0xffaa00);
-                ambientLight.intensity = 0.4;
+                ambientLight.intensity = 0.8;
                 partyGroupRef.current.visible = true;
                 camera.position.set(partySpawns.current[0].x, 0, partySpawns.current[0].z);
             }
@@ -494,9 +521,9 @@ const BackroomsView = ({ onExit }) => {
                 setStatus("EXILED.");
                 setHint("DON'T BLINK.");
                 scene.background = new THREE.Color(0x887766);
-                scene.fog = new THREE.FogExp2(0x887766, 0.035);
+                scene.fog = new THREE.FogExp2(0x887766, 0.02);
                 ambientLight.color.setHex(0xffeedd);
-                ambientLight.intensity = 0.8;
+                ambientLight.intensity = 1.0;
                 cornfieldGroupRef.current.visible = true;
                 const pt = cornSpawns.current[Math.floor(Math.random() * cornSpawns.current.length)];
                 camera.position.set(pt.x, 0, pt.z);
@@ -504,10 +531,10 @@ const BackroomsView = ({ onExit }) => {
             else if (newLevel === 'RUINS') {
                 setStatus("THE SANCTUARY.");
                 setHint("THE SKY IS WATCHING.");
-                scene.background = new THREE.Color(0x87CEEB); // Sky Blue
-                scene.fog = new THREE.FogExp2(0xeeeeee, 0.012); // Light Mist
+                scene.background = new THREE.Color(0x87CEEB);
+                scene.fog = new THREE.FogExp2(0xeeeeee, 0.005);
                 ambientLight.color.setHex(0xffffff);
-                ambientLight.intensity = 0.6;
+                ambientLight.intensity = 1.2;
                 ruinsGroupRef.current.visible = true;
                 const pt = ruinsSpawns.current[Math.floor(Math.random() * ruinsSpawns.current.length)];
                 camera.position.set(pt.x, 0, pt.z);
@@ -531,42 +558,51 @@ const BackroomsView = ({ onExit }) => {
             const delta = (time - lastTime) / 1000;
             lastTime = time;
 
-            // Move
-            if (moveState.current.left) camera.rotation.y += 2 * delta;
-            if (moveState.current.right) camera.rotation.y -= 2 * delta;
+            // MOVEMENT (FPS Style)
+            const forward = moveState.current.forward ? 1 : 0;
+            const backward = moveState.current.backward ? 1 : 0;
+            const left = moveState.current.left ? 1 : 0;
+            const right = moveState.current.right ? 1 : 0;
 
-            if (moveState.current.forward || moveState.current.backward) {
+            if (forward || backward || left || right) {
+                const speed = moveState.current.run ? 16.0 : 8.0; // Faster Sprint
+
                 const direction = new THREE.Vector3();
                 camera.getWorldDirection(direction);
                 direction.y = 0; direction.normalize();
-                if (moveState.current.backward) direction.negate();
 
-                const speed = moveState.current.run ? 14.0 : 6.0;
-                const nextX = camera.position.x + direction.x * speed * delta;
-                const nextZ = camera.position.z + direction.z * speed * delta;
+                const sideDir = new THREE.Vector3();
+                sideDir.crossVectors(camera.up, direction).normalize(); // Points Right? Or Left? 
+                // ThreeJS: Up(0,1,0) x Dir(0,0,-1) = (-1,0,0) -> Right is -1?
+                // Standard Right Rule: Index(Up) x Middle(Fwd) -> Thumb(Right).
+                // Let's just try: if 'A' goes wrong way, flip sign.
+                // Usually Cross(Dir, Up) = Right. Cross(Up, Dir) = Left.
+                // So sideDir is LEFT.
+
+                const moveVec = new THREE.Vector3();
+                if (forward) moveVec.add(direction);
+                if (backward) moveVec.sub(direction);
+                if (left) moveVec.add(sideDir);    // Add Left
+                if (right) moveVec.sub(sideDir);   // Sub Left = Right
+
+                moveVec.normalize();
+
+                const nextX = camera.position.x + moveVec.x * speed * delta;
+                const nextZ = camera.position.z + moveVec.z * speed * delta;
 
                 // Collision
                 let activeGroup = partyGroupRef.current;
                 if (currentLevelRef.current === 'CORNFIELD') activeGroup = cornfieldGroupRef.current;
                 if (currentLevelRef.current === 'RUINS') activeGroup = ruinsGroupRef.current;
 
-                // Raycast for arbitrary geometry collision
-                // For performance, we still want a grid or radius check, but we have mixed assets now.
-                // Simple Bounding Box check against local colliders?
-                // Or simplified: Just check distance to all "Obstacles".
-                // Since we have limited obstacles, iterating isn't too bad (optimization: spatial hash).
-                // Let's rely on our previous Grid logic for Party/Corn, but Ruins needs arbitrary check.
-
                 let collided = false;
                 if (currentLevelRef.current === 'RUINS') {
-                    // Ruins Collision (Radius based on obstacles)
-                    // We added invisible box colliders to ruinsGroup with userData.isBorder
+                    // Ruins Collision
                     activeGroup.children.forEach(c => {
                         if (c.userData.isBorder) {
-                            // box collision?
                             const dx = Math.abs(c.position.x - nextX);
                             const dz = Math.abs(c.position.z - nextZ);
-                            if (dx < 2 && dz < 2) collided = true;
+                            if (dx < 2.5 && dz < 2.5) collided = true;
                         }
                     });
                 } else {
@@ -581,13 +617,13 @@ const BackroomsView = ({ onExit }) => {
                     camera.position.z = nextZ;
                 }
 
-                const bobFreq = moveState.current.run ? 15 : 8;
-                camera.position.y = Math.sin(time * bobFreq) * 0.1;
+                const bobFreq = moveState.current.run ? 18 : 10;
+                camera.position.y = Math.sin(time * bobFreq) * 0.15;
             }
 
-            // Keys & Win
+            // Keys
             keysRef.current.forEach(k => {
-                if (k.visible && k.parent.visible) { // Check visibility
+                if (k.visible && k.parent.visible) {
                     k.rotation.y += delta;
                     if (camera.position.distanceTo(k.position) < 3.0) {
                         k.visible = false;
@@ -595,10 +631,9 @@ const BackroomsView = ({ onExit }) => {
                         setKeysCollected(c => c + 1);
                         if (collectedKeysRef.current === 3 && !cakeRef.current) {
                             setStatus("EXIT REVEALED.");
-                            // Spawn Cake in current level
                             const cake = new THREE.Sprite(new THREE.SpriteMaterial({ map: cakeTex }));
                             cake.scale.set(3, 3, 1);
-                            cake.position.set(camera.position.x + 5, 0, camera.position.z + 5); // Near player
+                            cake.position.set(camera.position.x + 5, 0, camera.position.z + 5);
                             if (currentLevelRef.current === 'PARTY') partyGroupRef.current.add(cake);
                             if (currentLevelRef.current === 'CORNFIELD') cornfieldGroupRef.current.add(cake);
                             if (currentLevelRef.current === 'RUINS') ruinsGroupRef.current.add(cake);
@@ -608,25 +643,39 @@ const BackroomsView = ({ onExit }) => {
                 }
             });
 
-            if (cakeRef.current) {
-                if (camera.position.distanceTo(cakeRef.current.position) < 2.0) {
-                    hasWonRef.current = true;
-                    setGameOver(true);
-                }
+            if (cakeRef.current && camera.position.distanceTo(cakeRef.current.position) < 2.0) {
+                hasWonRef.current = true;
+                setGameOver(true);
             }
 
-            // Enemies
+            // ENEMIES & ANIMATION
             enemiesRef.current.forEach(e => {
                 if (e.userData.level !== currentLevelRef.current) return;
                 const dist = e.position.distanceTo(camera.position);
-                // Simple Chase
-                if (dist < 30) {
+
+                // ANIMATION
+                if (e.userData.type === 'SCARECROW') {
+                    // Twitch
+                    e.rotation.z = Math.sin(time * 20) * 0.1; // Fast jitter
+                    e.rotation.x = Math.sin(time * 15) * 0.05;
+                } else if (e.userData.type === 'MINOTAUR') {
+                    // Heave / Breathe
+                    const s = 1.5 + Math.sin(time * 3) * 0.1;
+                    e.scale.set(s, s, s);
+                }
+
+                // CHASE
+                if (dist < 40) { // Increased Aggro Range
                     const dir = new THREE.Vector3().subVectors(camera.position, e.position).normalize();
                     dir.y = 0;
-                    e.position.addScaledVector(dir, (e.userData.type === 'SCARECROW' ? 12 : 6) * delta);
-                    if (e.userData.type === 'SCARECROW') e.lookAt(camera.position.x, e.position.y, camera.position.z);
 
-                    if (dist < 1.0) {
+                    const spd = e.userData.type === 'SCARECROW' ? 14 : (e.userData.type === 'MINOTAUR' ? 9 : 6);
+                    e.position.addScaledVector(dir, spd * delta);
+
+                    // Look at player
+                    if (e.userData.type !== 'HOST') e.lookAt(camera.position.x, e.position.y, camera.position.z);
+
+                    if (dist < 1.5) { // Increased hit radius for big mobs
                         jumpScareRef.current = true;
                         setStatus("CAUGHT");
                         setTimeout(() => window.location.reload(), 2000);
@@ -642,6 +691,7 @@ const BackroomsView = ({ onExit }) => {
             cancelAnimationFrame(aniId);
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
+            document.removeEventListener('mousemove', handleMouseMove);
             if (containerRef.current) containerRef.current.innerHTML = '';
             renderer.dispose();
             if (audioRef.current) audioRef.current.ctx.close();
@@ -671,6 +721,9 @@ const BackroomsView = ({ onExit }) => {
                                 <div className={`w-8 h-8 rounded-full border-2 ${moveState.current?.smile ? 'bg-green-500 border-green-300' : 'bg-transparent border-red-500'}`} />
                             </div>
                             <div className="text-sm text-yellow-300">HOLD [SHIFT] TO RUN</div>
+                            <div className="text-sm text-yellow-300 text-right mt-2 w-48">
+                                CLICK SCREEN TO ENABLE MOUSE LOOK
+                            </div>
                         </div>
                         <div className="mt-4 text-xl text-yellow-200">GIFTS OPENED: {keysCollected} / 3</div>
                     </div>
