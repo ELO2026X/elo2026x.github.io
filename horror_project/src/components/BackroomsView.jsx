@@ -67,37 +67,29 @@ const BackroomsView = ({ onExit }) => {
         // Fix texture wrapping
         wallTexture.wrapS = THREE.RepeatWrapping;
         wallTexture.wrapT = THREE.RepeatWrapping;
+        wallTexture.repeat.set(1, 1);
+
         carpetTexture.wrapS = THREE.RepeatWrapping;
         carpetTexture.wrapT = THREE.RepeatWrapping;
-
-        // Scene Setup
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111111); // Dark Grey, not pitch black
-        scene.fog = new THREE.FogExp2(0x111111, 0.02); // Reduced Fog
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false }); // Disable AA for grit
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.domElement.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; filter: contrast(1.1) brightness(1.2);';
-        containerRef.current.appendChild(renderer.domElement);
+        carpetTexture.repeat.set(4, 4);
 
         // Materials
         const wallMaterial = new THREE.MeshStandardMaterial({
             map: wallTexture,
-            color: 0x888888, // Brighter walls
-            roughness: 0.8,
-            metalness: 0.1
+            color: 0xffffff, // Pure white to show the yellow wallpaper
+            roughness: 0.5,
+            metalness: 0.0
         });
         const floorMaterial = new THREE.MeshStandardMaterial({
             map: carpetTexture,
-            color: 0x666666, // Brighter floor
+            color: 0x554433, // Brownish carpet
             roughness: 1.0
         });
-        const ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        const ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x221100 });
 
         // Build Maze
         const mazeGroup = new THREE.Group();
-        const wallGeometry = new THREE.BoxGeometry(cellSize, 8, cellSize); // Taller walls
+        const wallGeometry = new THREE.BoxGeometry(cellSize, 9, cellSize);
         const floorGeometry = new THREE.PlaneGeometry(cellSize, cellSize);
 
         const grid = mazeGridRef.current;
@@ -123,7 +115,7 @@ const BackroomsView = ({ onExit }) => {
 
                 // Walls
                 const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-                const targetY = cell === 1 ? 0 : -10; // -10 hides it
+                const targetY = cell === 1 ? 0 : -10;
                 wall.position.set(x, targetY, z);
                 wall.userData = { targetY, isBorder: (r === 0 || r === grid.length - 1 || c === 0 || c === row.length - 1) };
                 mazeGroup.add(wall);
@@ -131,10 +123,10 @@ const BackroomsView = ({ onExit }) => {
 
                 if (cell === 0) validSpawnPoints.push({ x, z });
 
-                // Add Lanterns (Randomly on walls)
-                if (cell === 1 && Math.random() > 0.8) {
-                    const lantern = new THREE.PointLight(0xffaa00, 1, 15);
-                    lantern.position.set(x, 0, z);
+                // Add Lanterns (Now "Party Lights" - Red/Blue/Green or just Yellow)
+                if (cell === 1 && Math.random() > 0.85) {
+                    const lantern = new THREE.PointLight(0xffaa00, 1, 12);
+                    lantern.position.set(x, 1, z);
                     lantern.userData = { flickerSpeed: Math.random() * 0.1 + 0.05, baseInt: 1 };
                     mazeGroup.add(lantern);
                 }
@@ -143,12 +135,12 @@ const BackroomsView = ({ onExit }) => {
         });
         scene.add(mazeGroup);
 
-        // Ambient light (Dim, creepy)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        // Ambient light (Dim, creepy yellow party vibe)
+        const ambientLight = new THREE.AmbientLight(0xffaa00, 0.4);
         scene.add(ambientLight);
 
-        // Player Light (Flashlight - Focused and Bright)
-        const flashlight = new THREE.SpotLight(0xffffff, 5.0, 120, Math.PI / 6, 0.5, 1);
+        // Player Light (Flashlight - Slightly Warm)
+        const flashlight = new THREE.SpotLight(0xffddaa, 3.0, 80, Math.PI / 5, 0.4, 1);
         flashlight.position.set(0, 0, 0);
         flashlight.target.position.set(0, 0, -1);
         camera.add(flashlight);
@@ -238,25 +230,24 @@ const BackroomsView = ({ onExit }) => {
             }
         }
 
-        // --- Nano Banana Enemy (Billboard) ---
-        // Create Sprite Texture
-        bananaTexture.magFilter = THREE.NearestFilter; // Pixel art look
-        const bananaMat = new THREE.SpriteMaterial({ map: bananaTexture, transparent: true });
-
-        const enemies = [];
+        // Create Enemy (Host Entity)
+        hostTexture.magFilter = THREE.NearestFilter; // Pixel art look
         const createEnemy = (x, z) => {
-            const sprite = new THREE.Sprite(bananaMat);
-            sprite.position.set(x, -1, z); // Feet on ground
-            sprite.scale.set(4, 6, 1); // Tall monster
+            const spriteMat = new THREE.SpriteMaterial({
+                map: hostTexture,
+                color: 0xffffff,
+                transparent: true,
+                depthWrite: false // Fix billboarding transparency issues
+            });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.position.set(x, 0, z); // Center on floor
+            sprite.scale.set(1.5, 3.5, 1); // Tall, lanky
             sprite.userData = {
-                type: 'enemy',
+                name: 'Host',
                 state: 'PATROL',
-                target: null,
-                speed: 3.0,
-                name: "NANO BANANA PRO",
-                desc: "A corrupted fruit hybrid. Highly aggressive."
+                glitchTimer: 0
             };
-            scene.add(sprite);
+            mazeGroup.add(sprite);
             return sprite;
         }
 
