@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
-import { Skull, Eye, Volume2, VolumeX, AlertCircle, ArrowLeft, Move, Info, Key, HelpCircle } from 'lucide-react';
+import { Skull, Eye, Volume2, VolumeX, AlertCircle, ArrowLeft, Move, Info, Key, HelpCircle, Play, Wheat } from 'lucide-react';
 
 const NARRATIVE_SCRIPT = [
     { time: 2, text: "Protocol: Birthday initiated." },
@@ -14,12 +14,13 @@ const BackroomsView = ({ onExit }) => {
     const containerRef = useRef();
     const [sanity, setSanity] = useState(100);
     const [audioEnabled, setAudioEnabled] = useState(false);
-    const [status, setStatus] = useState("Objective: Find 3 Gifts");
-    const [hint, setHint] = useState(""); // New Hint State
+    const [status, setStatus] = useState("AWAITING INPUT...");
+    const [hint, setHint] = useState("");
     const [keysCollected, setKeysCollected] = useState(0);
     const [currentThought, setCurrentThought] = useState(null);
     const [gameOver, setGameOver] = useState(false);
     const [socialBattery, setSocialBattery] = useState(100);
+    const [isInMenu, setIsInMenu] = useState(true); // Default to Menu
 
     const audioRef = useRef(null);
     const sanityRef = useRef(100);
@@ -52,6 +53,42 @@ const BackroomsView = ({ onExit }) => {
     ]);
     const cellSize = 10;
     const wallMeshesRef = useRef([]);
+
+    // --- LOGIC: Select Level ---
+    const startGame = (level) => {
+        setIsInMenu(false);
+        // Audio Context can only start here
+        if (!audioRef.current) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            gain.gain.value = 0;
+            osc.start();
+            audioRef.current = { ctx, osc, gain };
+            setAudioEnabled(true);
+        }
+
+        if (level === 'CORNFIELD') {
+            // We need to trigger this AFTER the scene is ready in the loop? 
+            // No, we can trigger it immediately via a ref flag or just let the loop handle it
+            // Actually, best to set a flag that the loop reads on first frame
+            // But since 'switchLevel' relies on 'scene' variables which are inside useEffect,
+            // we probably should expose switchLevel or just pass the prop.
+            // Simpler: Set a ref "pendingLevelSwitch" and handle in animate loop once.
+            pendingLevelSwitch.current = 'CORNFIELD';
+        } else {
+            setStatus("Objective: Find 3 Gifts");
+        }
+    };
+
+    // Create a ref to hold the switch function so we can call it from state changes if needed
+    // But since `switchLevel` is defined inside useEffect, we can't call it from `startGame` easily.
+    // Solution: Use a `pendingLevelSwitch` ref.
+    const pendingLevelSwitch = useRef(null);
+
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -252,9 +289,19 @@ const BackroomsView = ({ onExit }) => {
         // LOOP
         let lastTime = performance.now();
         const animate = () => {
+            requestAnimationFrame(animate);
+
+            // Halt if in Menu or Game Over
+            if (isInMenu) return; // <-- PAUSE GAME IF IN MENU
+
+            // Handle pending switch
+            if (pendingLevelSwitch.current) {
+                switchLevel(pendingLevelSwitch.current);
+                pendingLevelSwitch.current = null;
+            }
+
             if (jumpScareRef.current || hasWonRef.current) return;
 
-            requestAnimationFrame(animate);
             const time = performance.now();
             const delta = (time - lastTime) / 1000;
             lastTime = time;
@@ -435,7 +482,7 @@ const BackroomsView = ({ onExit }) => {
             renderer.dispose();
         };
 
-    }, [audioEnabled]);
+    }, [audioEnabled, isInMenu]); // Added isInMenu dep
 
     return (
         <div className="relative w-full h-screen bg-black overflow-hidden font-mono select-none">
@@ -472,8 +519,41 @@ const BackroomsView = ({ onExit }) => {
                 </div>
             )}
 
+            {/* MAIN MENU STAGE SELECT (NEW) */}
+            {isInMenu && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 text-yellow-500">
+                    <h1 className="text-6xl font-black tracking-widest mb-12 animate-pulse text-yellow-200 drop-shadow-lg">SELECT STAGE</h1>
+                    <div className="flex gap-8">
+                        <button
+                            onClick={() => startGame('PARTY')}
+                            className="group relative px-8 py-6 border-2 border-yellow-600 bg-black hover:bg-yellow-900 transition-all cursor-pointer overflow-hidden"
+                        >
+                            <div className="flex flex-col items-center gap-4 relative z-10">
+                                <Play className="w-12 h-12 text-yellow-500 group-hover:text-white" />
+                                <span className="text-2xl font-bold tracking-widest group-hover:text-white">LEVEL 21: THE PARTY</span>
+                            </div>
+                            <div className="absolute inset-0 bg-yellow-600/20 group-hover:bg-yellow-600/40 transition-all translate-y-full group-hover:translate-y-0" />
+                        </button>
+
+                        <button
+                            onClick={() => startGame('CORNFIELD')}
+                            className="group relative px-8 py-6 border-2 border-red-900 bg-black hover:bg-red-950 transition-all cursor-pointer overflow-hidden"
+                        >
+                            <div className="flex flex-col items-center gap-4 relative z-10">
+                                <Wheat className="w-12 h-12 text-red-700 group-hover:text-red-500" />
+                                <span className="text-2xl font-bold tracking-widest text-red-800 group-hover:text-red-500">LEVEL 10: THE CORNFIELD</span>
+                            </div>
+                            <div className="absolute inset-0 bg-red-900/10 group-hover:bg-red-900/30 transition-all translate-y-full group-hover:translate-y-0" />
+                        </button>
+                    </div>
+                    <p className="mt-12 text-gray-500 font-mono text-sm max-w-md text-center">
+                        WARNING: Level 10 is an Exiled Zone. Entities demonstrate quantum-lock behaviors. Do not blink.
+                    </p>
+                </div>
+            )}
+
             {/* Victory / Game Over Overlay */}
-            {(gameOver || jumpScareRef.current) && (
+            {(gameOver || jumpScareRef.current) && !isInMenu && (
                 <div className={`absolute inset-0 z-20 flex flex-col items-center justify-center ${gameOver ? 'bg-yellow-900' : 'bg-red-600'} mix-blend-multiply transition-opacity duration-1000`}>
                     {gameOver ? (
                         <div className="text-center animate-bounce">
