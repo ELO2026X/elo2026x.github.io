@@ -130,7 +130,6 @@ const BackroomsView = ({ onExit }) => {
     const [socialBattery, setSocialBattery] = useState(100);
     const [isInMenu, setIsInMenu] = useState(true);
 
-    const audioRef = useRef(null);
     const keysRef = useRef([]);
     const collectedKeysRef = useRef(0);
     const jumpScareRef = useRef(false);
@@ -159,34 +158,51 @@ const BackroomsView = ({ onExit }) => {
     const cornSpawns = useRef([]);
     const ruinsSpawns = useRef([]);
 
-    // --- AUDIO SYSTEM ---
+    // --- NEW AUDIO SYSTEM ---
+    const audioTracks = useRef({});
+    const currentTrack = useRef(null);
+    const isChasingRef = useRef(false);
+
     const initAudio = () => {
-        if (audioRef.current) return;
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContext();
+        if (audioEnabled) return;
+        const baseUrl = import.meta.env.BASE_URL;
 
-        const droneOsc = ctx.createOscillator();
-        droneOsc.type = 'sawtooth';
-        droneOsc.frequency.value = 50;
-        const droneGain = ctx.createGain();
-        droneGain.gain.value = 0.1;
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 200;
-        droneOsc.connect(filter);
-        filter.connect(droneGain);
-        droneGain.connect(ctx.destination);
-        droneOsc.start();
+        // Load Tracks
+        const tracks = {
+            PARTY: new Audio(`${baseUrl}audio/party_ambience.mp3`),
+            CORNFIELD: new Audio(`${baseUrl}audio/cornfield_ambience.mp3`),
+            RUINS: new Audio(`${baseUrl}audio/ruins_ambience.mp3`),
+            CHASE: new Audio(`${baseUrl}audio/chase_music.mp3`)
+        };
 
-        const screamOsc = ctx.createOscillator();
-        const screamGain = ctx.createGain();
-        screamGain.gain.value = 0;
-        screamOsc.connect(screamGain);
-        screamGain.connect(ctx.destination);
-        screamOsc.start();
+        // Loop Settings
+        tracks.PARTY.loop = true;
+        tracks.CORNFIELD.loop = true;
+        tracks.RUINS.loop = true;
+        tracks.CHASE.loop = true; // Loop chase music too
 
-        audioRef.current = { ctx, droneOsc, droneGain, screamOsc, screamGain };
+        // Volume Mix
+        tracks.PARTY.volume = 0.6;
+        tracks.CORNFIELD.volume = 0.7;
+        tracks.RUINS.volume = 0.8;
+        tracks.CHASE.volume = 1.0;
+
+        audioTracks.current = tracks;
         setAudioEnabled(true);
+    };
+
+    const playTrack = (trackName) => {
+        Object.values(audioTracks.current).forEach(t => {
+            if (t !== audioTracks.current[trackName]) {
+                t.pause();
+                t.currentTime = 0;
+            }
+        });
+        const track = audioTracks.current[trackName];
+        if (track) {
+            track.play().catch(e => console.log("Audio play failed:", e));
+            currentTrack.current = trackName;
+        }
     };
 
     const startGame = (level) => {
@@ -202,7 +218,12 @@ const BackroomsView = ({ onExit }) => {
         // Pointer Lock & Mouse Look
         document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
         const handleClick = () => {
-            if (!isInMenu && !gameOver) containerRef.current.requestPointerLock();
+            if (!isInMenu && !gameOver) {
+                containerRef.current.requestPointerLock();
+                if (audioEnabled && currentTrack.current) {
+                    audioTracks.current[currentTrack.current].play().catch(e => { });
+                }
+            }
         };
         const handleMouseMove = (e) => {
             if (document.pointerLockElement === containerRef.current) {
@@ -221,7 +242,7 @@ const BackroomsView = ({ onExit }) => {
                 case 'KeyS': moveState.current.backward = true; break;
                 case 'KeyA': moveState.current.left = true; break;
                 case 'KeyD': moveState.current.right = true; break;
-                case 'Space': moveState.current.jump = true; break; // JUMP
+                case 'Space': moveState.current.jump = true; break;
                 case 'ShiftLeft':
                 case 'ShiftRight': moveState.current.run = true; break;
             }
@@ -485,6 +506,11 @@ const BackroomsView = ({ onExit }) => {
             cornfieldGroupRef.current.visible = false;
             ruinsGroupRef.current.visible = false;
 
+            // AUDIO SWITCH
+            if (audioTracks.current[newLevel]) {
+                playTrack(newLevel);
+            }
+
             if (newLevel === 'PARTY') {
                 setStatus("Objective: Find 3 Gifts");
                 setHint("");
@@ -638,6 +664,7 @@ const BackroomsView = ({ onExit }) => {
             }
 
             // ENEMIES & ANIMATION
+            let chasing = false;
             enemiesRef.current.forEach(e => {
                 if (e.userData.level !== currentLevelRef.current) return;
                 const dist = e.position.distanceTo(camera.position);
@@ -653,6 +680,7 @@ const BackroomsView = ({ onExit }) => {
 
                 // CHASE
                 if (dist < 40) {
+                    chasing = true;
                     const dir = new THREE.Vector3().subVectors(camera.position, e.position).normalize();
                     dir.y = 0;
 
@@ -669,6 +697,16 @@ const BackroomsView = ({ onExit }) => {
                 }
             });
 
+            // AUDIO CHASE LOGIC
+            if (chasing !== isChasingRef.current) {
+                isChasingRef.current = chasing;
+                if (chasing) {
+                    playTrack('CHASE');
+                } else {
+                    playTrack(currentLevelRef.current);
+                }
+            }
+
             renderer.render(scene, camera);
         };
         const aniId = requestAnimationFrame(animate);
@@ -680,7 +718,7 @@ const BackroomsView = ({ onExit }) => {
             document.removeEventListener('mousemove', handleMouseMove);
             if (containerRef.current) containerRef.current.innerHTML = '';
             renderer.dispose();
-            if (audioRef.current) audioRef.current.ctx.close();
+            Object.values(audioTracks.current).forEach(t => t.pause());
         };
 
     }, [isInMenu]);
