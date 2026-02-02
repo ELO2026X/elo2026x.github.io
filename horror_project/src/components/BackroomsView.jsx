@@ -10,6 +10,82 @@ const NARRATIVE_SCRIPT = [
     { time: 60, text: "The Cornfield is waiting for the rude ones." }
 ];
 
+// --- PROCEDURAL 3D ASSETS ---
+
+const createScarecrow = () => {
+    const group = new THREE.Group();
+
+    // Post
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 1 });
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 0.2), woodMat);
+    post.position.y = 1.5;
+    group.add(post);
+
+    // Crossbar
+    const crossbar = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 0.2), woodMat);
+    crossbar.position.y = 2.2;
+    // Tilt it slightly
+    crossbar.rotation.z = (Math.random() - 0.5) * 0.2;
+    group.add(crossbar);
+
+    // Head (Burlap Sack)
+    const sackMat = new THREE.MeshStandardMaterial({ color: 0xc2b280, roughness: 1 });
+    const head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), sackMat);
+    head.position.y = 2.8;
+    group.add(head);
+
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.08);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.15, 2.85, 0.35);
+    rightEye.position.set(0.15, 2.85, 0.35);
+    group.add(leftEye);
+    group.add(rightEye);
+
+    // Tattered Cloth (Coat)
+    const clothGeo = new THREE.ConeGeometry(0.8, 1.5, 4, 1, true);
+    const clothMat = new THREE.MeshStandardMaterial({ color: 0x333333, side: THREE.DoubleSide, roughness: 1 });
+    const coat = new THREE.Mesh(clothGeo, clothMat);
+    coat.position.y = 1.8;
+    coat.scale.z = 0.5;
+    group.add(coat);
+
+    return group;
+};
+
+const createCornStalk = () => {
+    // Use a Billboard Sprite for performance if we have thousands, 
+    // but user asked for 3D. Let's make a low-poly 3D stalk.
+    const group = new THREE.Group();
+
+    // Stalk
+    const stalkGeo = new THREE.CylinderGeometry(0.05, 0.1, 4, 5);
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x556b2f, roughness: 0.8 });
+    const stalk = new THREE.Mesh(stalkGeo, greenMat);
+    stalk.position.y = 0; // Center is 0, so -2 to +2
+    group.add(stalk);
+
+    // Leaves (Simple Planes)
+    const leafGeo = new THREE.PlaneGeometry(0.3, 1.5);
+    leafGeo.translate(0, 0.75, 0); // Pivot at bottom
+    for (let i = 0; i < 4; i++) {
+        const leaf = new THREE.Mesh(leafGeo, greenMat);
+        leaf.position.y = (Math.random() * 2) - 1;
+        leaf.rotation.y = Math.random() * Math.PI * 2;
+        leaf.rotation.z = Math.PI / 4; // Fold out
+        group.add(leaf);
+    }
+
+    // Random Height/Scale variation
+    const scale = 0.8 + Math.random() * 0.4;
+    group.scale.set(scale, scale, scale);
+
+    return group;
+};
+
+
 const BackroomsView = ({ onExit }) => {
     const containerRef = useRef();
     const [sanity, setSanity] = useState(100);
@@ -20,23 +96,29 @@ const BackroomsView = ({ onExit }) => {
     const [currentThought, setCurrentThought] = useState(null);
     const [gameOver, setGameOver] = useState(false);
     const [socialBattery, setSocialBattery] = useState(100);
-    const [isInMenu, setIsInMenu] = useState(true); // Default to Menu
+    const [isInMenu, setIsInMenu] = useState(true);
 
     const audioRef = useRef(null);
     const sanityRef = useRef(100);
-    const startTimeRef = useRef(performance.now());
     const keysRef = useRef([]);
     const collectedKeysRef = useRef(0);
     const jumpScareRef = useRef(false);
-    const currentLevelRef = useRef('PARTY'); // 'PARTY' or 'CORNFIELD'
+    const currentLevelRef = useRef('PARTY');
     const hasWonRef = useRef(false);
     const cakeRef = useRef(null);
+
+    // Scene Refs (to modify during loop)
+    const sceneRef = useRef(null);
+    const enemiesRef = useRef([]);
+    const cornfieldGroupRef = useRef(new THREE.Group());
+    const partyGroupRef = useRef(new THREE.Group());
 
     const moveState = useRef({
         forward: false, backward: false, left: false, right: false,
         smile: false, run: false
     });
 
+    // 1 = Wall, 0 = Empty (Walkable)
     const mazeGridRef = useRef([
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
@@ -52,47 +134,57 @@ const BackroomsView = ({ onExit }) => {
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ]);
     const cellSize = 10;
-    const wallMeshesRef = useRef([]);
+    const validSpawnPoints = useRef([]);
 
-    // --- LOGIC: Select Level ---
-    const startGame = (level) => {
-        setIsInMenu(false);
-        // Audio Context can only start here
-        if (!audioRef.current) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            gain.gain.value = 0;
-            osc.start();
-            audioRef.current = { ctx, osc, gain };
-            setAudioEnabled(true);
-        }
+    // --- AUDIO SYSTEM (Dark Drone) ---
+    const initAudio = () => {
+        if (audioRef.current) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
 
-        if (level === 'CORNFIELD') {
-            // We need to trigger this AFTER the scene is ready in the loop? 
-            // No, we can trigger it immediately via a ref flag or just let the loop handle it
-            // Actually, best to set a flag that the loop reads on first frame
-            // But since 'switchLevel' relies on 'scene' variables which are inside useEffect,
-            // we probably should expose switchLevel or just pass the prop.
-            // Simpler: Set a ref "pendingLevelSwitch" and handle in animate loop once.
-            pendingLevelSwitch.current = 'CORNFIELD';
-        } else {
-            setStatus("Objective: Find 3 Gifts");
-        }
+        // Low Drone (constant)
+        const droneOsc = ctx.createOscillator();
+        droneOsc.type = 'sawtooth';
+        droneOsc.frequency.value = 50;
+        const droneGain = ctx.createGain();
+        droneGain.gain.value = 0.1;
+
+        // Filter to make it muffled/dark
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 200;
+
+        droneOsc.connect(filter);
+        filter.connect(droneGain);
+        droneGain.connect(ctx.destination);
+        droneOsc.start();
+
+        // Screech Osc (for Jumpscares only)
+        const screamOsc = ctx.createOscillator();
+        screamOsc.type = 'sawtooth';
+        const screamGain = ctx.createGain();
+        screamGain.gain.value = 0;
+        screamOsc.connect(screamGain);
+        screamGain.connect(ctx.destination);
+        screamOsc.start();
+
+        audioRef.current = { ctx, droneOsc, droneGain, screamOsc, screamGain };
+        setAudioEnabled(true);
     };
 
-    // Create a ref to hold the switch function so we can call it from state changes if needed
-    // But since `switchLevel` is defined inside useEffect, we can't call it from `startGame` easily.
-    // Solution: Use a `pendingLevelSwitch` ref.
-    const pendingLevelSwitch = useRef(null);
+    const startGame = (level) => {
+        setIsInMenu(false);
+        initAudio();
+        pendingLevelSwitch.current = level;
+    };
 
+    // Switch queue
+    const pendingLevelSwitch = useRef(null);
 
     useEffect(() => {
         if (!containerRef.current) return;
 
+        // Input Handlers
         const handleKeyDown = (e) => {
             switch (e.code) {
                 case 'KeyW': moveState.current.forward = true; break;
@@ -115,90 +207,121 @@ const BackroomsView = ({ onExit }) => {
                 case 'ShiftRight': moveState.current.run = false; break;
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
+        // THREE.JS INIT
         const baseUrl = import.meta.env.BASE_URL;
         const textureLoader = new THREE.TextureLoader();
 
-        // --- ASSETS ---
+        // Assets
         const partyWallTex = textureLoader.load(`${baseUrl}images/party_wallpaper.png`);
         const partyCarpetTex = textureLoader.load(`${baseUrl}images/carpet.png`);
-        const hostTex = textureLoader.load(`${baseUrl}images/host.png`);
-        const cornWallTex = textureLoader.load(`${baseUrl}images/corn_wall.png`);
         const dirtTex = textureLoader.load(`${baseUrl}images/dirt_ground.png`);
-        const scarecrowTex = textureLoader.load(`${baseUrl}images/scarecrow.png`);
+        const hostTex = textureLoader.load(`${baseUrl}images/host.png`);
         const cakeTex = textureLoader.load(`${baseUrl}images/cake.png`);
 
-        // Texture Settings
-        [partyWallTex, cornWallTex].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 1); });
-        [partyCarpetTex, dirtTex].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 4); });
-
+        // Tex Settings
+        partyWallTex.wrapS = partyWallTex.wrapT = THREE.RepeatWrapping;
+        partyCarpetTex.wrapS = partyCarpetTex.wrapT = THREE.RepeatWrapping;
+        dirtTex.wrapS = dirtTex.wrapT = THREE.RepeatWrapping;
+        partyCarpetTex.repeat.set(4, 4);
+        dirtTex.repeat.set(4, 4);
         hostTex.magFilter = THREE.NearestFilter;
-        scarecrowTex.magFilter = THREE.NearestFilter;
         cakeTex.magFilter = THREE.NearestFilter;
 
         // Scene
         const scene = new THREE.Scene();
+        sceneRef.current = scene;
         scene.background = new THREE.Color(0x332200);
         scene.fog = new THREE.FogExp2(0x443300, 0.03);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        // Retro Effect CSS
         renderer.domElement.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; filter: contrast(1.2) sepia(0.4) saturate(1.5);';
         containerRef.current.appendChild(renderer.domElement);
 
         // Materials
-        const wallMaterial = new THREE.MeshStandardMaterial({ map: partyWallTex, color: 0xffffff, roughness: 0.5 });
-        const floorMaterial = new THREE.MeshStandardMaterial({ map: partyCarpetTex, color: 0x554433, roughness: 1.0 });
-        const ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x221100 });
+        const partyMat = new THREE.MeshStandardMaterial({ map: partyWallTex, color: 0xffffff, roughness: 0.5 });
+        const carpetMat = new THREE.MeshStandardMaterial({ map: partyCarpetTex, color: 0x554433, roughness: 1.0 });
+        const dirtMat = new THREE.MeshStandardMaterial({ map: dirtTex, color: 0x333333, roughness: 1.0 });
+        const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x221100 });
 
-        // Maze Group
-        const mazeGroup = new THREE.Group();
-        const wallGeometry = new THREE.BoxGeometry(cellSize, 12, cellSize);
-        const floorGeometry = new THREE.PlaneGeometry(cellSize, cellSize);
+        // --- LEVEL GROUPS ---
+        const partyGroup = new THREE.Group();
+        partyGroupRef.current = partyGroup;
+        scene.add(partyGroup);
 
+        const cornGroup = new THREE.Group();
+        cornfieldGroupRef.current = cornGroup;
+        cornGroup.visible = false;
+        scene.add(cornGroup);
+
+        // Build Maze Geometry (Dual Level)
         const grid = mazeGridRef.current;
-        const validSpawnPoints = [];
-        const ceilingMeshes = [];
+        const wallGeo = new THREE.BoxGeometry(cellSize, 12, cellSize);
+        const floorGeo = new THREE.PlaneGeometry(cellSize, cellSize);
 
         grid.forEach((row, r) => {
-            const rowMeshes = [];
             row.forEach((cell, c) => {
                 const x = c * cellSize;
                 const z = r * cellSize;
-                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-                floor.rotation.x = -Math.PI / 2;
-                floor.position.set(x, -4, z);
-                mazeGroup.add(floor);
 
-                const ceiling = new THREE.Mesh(floorGeometry, ceilingMaterial);
-                ceiling.rotation.x = Math.PI / 2;
-                ceiling.position.set(x, 4, z);
-                mazeGroup.add(ceiling);
-                ceilingMeshes.push(ceiling);
+                // 1. PARTY LEVEL BUILD
+                const pFloor = new THREE.Mesh(floorGeo, carpetMat);
+                pFloor.rotation.x = -Math.PI / 2;
+                pFloor.position.set(x, -4, z);
+                partyGroup.add(pFloor);
 
-                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-                const targetY = cell === 1 ? 0 : -20;
-                wall.position.set(x, targetY, z);
-                wall.userData = { targetY, isBorder: (r === 0 || r === grid.length - 1 || c === 0 || c === row.length - 1) };
-                mazeGroup.add(wall);
-                rowMeshes.push(wall);
+                const pCeiling = new THREE.Mesh(floorGeo, ceilingMat);
+                pCeiling.rotation.x = Math.PI / 2;
+                pCeiling.position.set(x, 4, z);
+                partyGroup.add(pCeiling);
 
-                if (cell === 0) validSpawnPoints.push({ x, z });
+                if (cell === 1) { // Wall
+                    const pWall = new THREE.Mesh(wallGeo, partyMat);
+                    pWall.position.set(x, 0, z);
+                    pWall.userData = { isBorder: true }; // Collidable
+                    partyGroup.add(pWall);
+                } else {
+                    validSpawnPoints.current.push({ x, z });
+                    // Sparse Lanterns
+                    if (Math.random() > 0.85) {
+                        const lantern = new THREE.PointLight(0xffaa00, 1, 12);
+                        lantern.position.set(x, 1, z);
+                        partyGroup.add(lantern);
+                    }
+                }
 
-                if (cell === 1 && Math.random() > 0.85) {
-                    const lantern = new THREE.PointLight(0xffaa00, 1, 12);
-                    lantern.position.set(x, 1, z);
-                    lantern.userData = { type: 'lantern', flickerSpeed: Math.random() * 0.1 + 0.05, baseInt: 1 };
-                    mazeGroup.add(lantern);
+                // 2. CORNFIELD LEVEL BUILD
+                const cFloor = new THREE.Mesh(floorGeo, dirtMat);
+                cFloor.rotation.x = -Math.PI / 2;
+                cFloor.position.set(x, -4, z); // Same floor plane
+                cornGroup.add(cFloor);
+
+                // NO CEILING IN CORNFIELD (Open Sky)
+
+                if (cell === 1) {
+                    // Wall for Cornfield is... THICK CORN STALKS
+                    // Place 5-10 stalks per wall cell to create a "thicket"
+                    for (let i = 0; i < 8; i++) {
+                        const stalk = createCornStalk();
+                        // Random offset within the cell
+                        const ox = (Math.random() - 0.5) * cellSize * 0.9;
+                        const oz = (Math.random() - 0.5) * cellSize * 0.9;
+                        stalk.position.set(x + ox, -4, z + oz);
+                        cornGroup.add(stalk);
+                    }
+                    // Invisible collider wall so player can't walk through stalks
+                    const cCollider = new THREE.Mesh(wallGeo, new THREE.MeshBasicMaterial({ visible: false }));
+                    cCollider.position.set(x, 0, z);
+                    cCollider.userData = { isBorder: true }; // Collidable
+                    cornGroup.add(cCollider);
                 }
             });
-            wallMeshesRef.current.push(rowMeshes);
         });
-        scene.add(mazeGroup);
 
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffaa00, 0.4);
@@ -211,92 +334,112 @@ const BackroomsView = ({ onExit }) => {
         camera.add(flashlight.target);
         scene.add(camera);
 
-        // Enemies
-        const enemies = [];
-        const spawnEnemy = (tex, name) => {
-            if (validSpawnPoints.length === 0) return;
-            const idx = Math.floor(validSpawnPoints.length * 0.8 + Math.random() * (validSpawnPoints.length * 0.2));
-            const pos = validSpawnPoints[idx];
-            const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.position.set(pos.x, 0, pos.z);
-            sprite.scale.set(1.5, 3.5, 1);
-            sprite.userData = { name, state: 'PATROL', glitchTimer: 0 };
-            mazeGroup.add(sprite);
-            enemies.push(sprite);
-        };
-        spawnEnemy(hostTex, "Host");
-        spawnEnemy(hostTex, "Host");
-
+        // Spawn Player
         camera.position.set(cellSize, 0, cellSize);
 
-        // Keys / Gifts
+        // Assets / Gifts (Global?)
+        // Let's keep gifts in BOTH levels or reset them? For now, they are scene children.
         const keyGeo = new THREE.TorusGeometry(0.5, 0.1, 8, 16);
         const keyMat = new THREE.MeshBasicMaterial({ color: 0xffd700 });
         for (let i = 0; i < 3; i++) {
-            const idx = Math.floor(Math.random() * validSpawnPoints.length);
-            const pos = validSpawnPoints[idx];
+            const idx = Math.floor(Math.random() * validSpawnPoints.current.length);
+            const pos = validSpawnPoints.current[idx];
             const key = new THREE.Mesh(keyGeo, keyMat);
             key.position.set(pos.x, -2, pos.z);
             key.userData = { type: 'key' };
-            scene.add(key);
+            scene.add(key); // Add to root scene so visible in both? Or switch? 
+            // Ideally gifts should persist across levels. Root scene is fine as long as y matches.
             keysRef.current.push(key);
             const kLight = new THREE.PointLight(0xffd700, 1, 5);
             kLight.position.set(pos.x, -2, pos.z);
             scene.add(kLight);
         }
 
-        // --- LEVEL SWITCH LOGIC ---
-        const switchLevel = (newLevel) => {
+        // --- ENEMIES ---
+        // 1. Hosts (Party) - Sprites
+        // 2. Scarecrows (Cornfield) - 3D Models
+
+        const spawnEntity = (type, pos) => {
+            let entity;
+            if (type === 'HOST') {
+                const mat = new THREE.SpriteMaterial({ map: hostTex, transparent: true });
+                entity = new THREE.Sprite(mat);
+                entity.scale.set(1.5, 3.5, 1);
+                entity.position.set(pos.x, 0, pos.z);
+                entity.userData = {
+                    type: 'HOST',
+                    state: 'PATROL',
+                    level: 'PARTY'
+                };
+                partyGroup.add(entity);
+            } else {
+                entity = createScarecrow();
+                entity.position.set(pos.x, -4, pos.z); // Feet on ground
+                entity.userData = {
+                    type: 'SCARECROW',
+                    state: 'FROZEN', // Weeping Angel logic default
+                    level: 'CORNFIELD'
+                };
+                cornGroup.add(entity);
+            }
+            enemiesRef.current.push(entity);
+        };
+
+        // Initial Spawns
+        spawnEntity('HOST', validSpawnPoints.current[5]);
+        spawnEntity('HOST', validSpawnPoints.current[10] || validSpawnPoints.current[0]);
+        spawnEntity('SCARECROW', validSpawnPoints.current[6]);
+        spawnEntity('SCARECROW', validSpawnPoints.current[11] || validSpawnPoints.current[1]);
+
+
+        // --- LEVEL SWITCH IMPLEMENTATION ---
+        const handleSwitchLevel = (newLevel) => {
             currentLevelRef.current = newLevel;
 
             if (newLevel === 'CORNFIELD') {
                 setStatus("EXILED TO THE CORNFIELD.");
                 setHint("THEY ONLY MOVE WHEN UNAWARE. WATCH THEM.");
-                setSanity(100);
 
-                wallMaterial.map = cornWallTex;
-                floorMaterial.map = dirtTex;
-                floorMaterial.color.setHex(0x333333);
-                wallMaterial.color.setHex(0xaaaaaa);
+                // Visibility Trigger
+                partyGroupRef.current.visible = false;
+                cornfieldGroupRef.current.visible = true;
 
-                ceilingMeshes.forEach(m => m.visible = false);
+                // Atmosphere
+                scene.background = new THREE.Color(0x111111); // Darker night
+                scene.fog = new THREE.FogExp2(0x111111, 0.04);
+                ambientLight.color.setHex(0x555577); // Moonlight blueish
+                ambientLight.intensity = 0.2;
 
-                scene.background = new THREE.Color(0x555544);
-                scene.fog = new THREE.FogExp2(0x555544, 0.04);
-                ambientLight.color.setHex(0xaaaaaa);
-                ambientLight.intensity = 0.8;
-
-                enemies.forEach(e => {
-                    e.material.map = scarecrowTex;
-                    e.userData.name = "Scarecrow";
-                    e.scale.set(2, 4, 1);
-                });
-
-                mazeGroup.children.forEach(c => {
-                    if (c.userData.type === 'lantern') c.visible = false;
-                });
-
-                const randPt = validSpawnPoints[Math.floor(Math.random() * validSpawnPoints.length)];
+                // Randomize Player Pos
+                const randPt = validSpawnPoints.current[Math.floor(Math.random() * validSpawnPoints.current.length)];
                 camera.position.set(randPt.x, 0, randPt.z);
 
-                // Clear hint after 5 seconds
-                setTimeout(() => setHint(""), 5000);
+            } else {
+                // PARTY
+                setStatus("Objective: Find 3 Gifts");
+                setHint("");
 
+                partyGroupRef.current.visible = true;
+                cornfieldGroupRef.current.visible = false;
+
+                scene.background = new THREE.Color(0x332200);
+                scene.fog = new THREE.FogExp2(0x443300, 0.03);
+                ambientLight.color.setHex(0xffaa00);
+                ambientLight.intensity = 0.4;
+
+                camera.position.set(cellSize, 0, cellSize);
             }
         };
 
-        // LOOP
+
+        // --- GAME LOOP ---
         let lastTime = performance.now();
         const animate = () => {
             requestAnimationFrame(animate);
+            if (isInMenu) return; // Menu Pause
 
-            // Halt if in Menu or Game Over
-            if (isInMenu) return; // <-- PAUSE GAME IF IN MENU
-
-            // Handle pending switch
             if (pendingLevelSwitch.current) {
-                switchLevel(pendingLevelSwitch.current);
+                handleSwitchLevel(pendingLevelSwitch.current);
                 pendingLevelSwitch.current = null;
             }
 
@@ -306,7 +449,7 @@ const BackroomsView = ({ onExit }) => {
             const delta = (time - lastTime) / 1000;
             lastTime = time;
 
-            // Movement
+            // Player Movement
             if (moveState.current.left) camera.rotation.y += 2 * delta;
             if (moveState.current.right) camera.rotation.y -= 2 * delta;
 
@@ -319,25 +462,28 @@ const BackroomsView = ({ onExit }) => {
                 direction.y = 0; direction.normalize();
                 if (moveBackward) direction.negate();
 
-                const speed = moveState.current.run ? 12.0 : 5.0; // Sprint Multiplier
+                const speed = moveState.current.run ? 12.0 : 5.0;
                 const nextX = camera.position.x + direction.x * speed * delta;
                 const nextZ = camera.position.z + direction.z * speed * delta;
 
-                // Improved Collision with Wall Slide
+                // Collision Check (Depends on active level group + border data)
+                // We check against child meshes that have userData.isBorder
+                const activeGroup = currentLevelRef.current === 'PARTY' ? partyGroupRef.current : cornfieldGroupRef.current;
+
+                // Simple Grid Collision (Backsup Raycasting)
                 const gridX = Math.round(nextX / cellSize);
                 const gridZ = Math.round(nextZ / cellSize);
 
+                // Note: The logic handles both wall meshes and grid 0/1 array.
+                // Grid array is safer.
                 if (grid[gridZ] && grid[gridZ][gridX] === 0) {
-                    // No collision, move freely
                     camera.position.x = nextX; camera.position.z = nextZ;
                 } else {
-                    // Collision! Try sliding.
-                    // Try moving only X
+                    // Wall Sliding
                     const currGridZ = Math.round(camera.position.z / cellSize);
                     if (grid[currGridZ] && grid[currGridZ][gridX] === 0) {
                         camera.position.x = nextX;
                     }
-                    // Try moving only Z
                     else {
                         const currGridX = Math.round(camera.position.x / cellSize);
                         if (grid[gridZ] && grid[gridZ][currGridX] === 0) {
@@ -346,30 +492,19 @@ const BackroomsView = ({ onExit }) => {
                     }
                 }
 
-                // Reduced Head Bob (Less shaking, fast bob when running)
-                const bobFreq = moveState.current.run ? 15 : 10;
-                camera.position.y = Math.sin(time * bobFreq) * 0.05;
+                // Head Bob
+                const bobFreq = moveState.current.run ? 15 : 8;
+                camera.position.y = Math.sin(time * bobFreq) * 0.08;
             } else {
-                // Reset height when stopped
                 camera.position.y = THREE.MathUtils.lerp(camera.position.y, 0, delta * 5);
             }
 
-            // Social Battery & Switch
-            if (moveState.current.smile) {
-                if (socialBattery > 0) setSocialBattery(prev => Math.max(0, prev - (15 * delta)));
-                else {
-                    moveState.current.smile = false;
-                    if (currentLevelRef.current === 'PARTY') switchLevel('CORNFIELD');
-                }
-            } else {
-                setSocialBattery(prev => Math.min(100, prev + (2 * delta)));
-            }
-
+            // Interaction Check (Keys / Cake)
             // Keys
             keysRef.current.forEach(key => {
                 if (key.visible) {
                     key.rotation.y += delta;
-                    if (camera.position.distanceTo(key.position) < 2) {
+                    if (camera.position.distanceTo(key.position) < 2.5) {
                         key.visible = false;
                         collectedKeysRef.current += 1;
                         setKeysCollected(c => c + 1);
@@ -383,68 +518,92 @@ const BackroomsView = ({ onExit }) => {
                             const cake = new THREE.Sprite(cakeMat);
                             cake.scale.set(3, 3, 1);
                             cake.position.set(cellSize, 0, cellSize);
-                            mazeGroup.add(cake);
+                            partyGroupRef.current.add(cake); // Add to party group 
+                            //(What if in Cornfield? Assume exit is in Party level, requiring survival)
+                            // Actually, if they are in Cornfield, they are stuck forever? 
+                            // Let's make Cornfield contain a portal back?
+                            // For now, Cake is exit.
                             cakeRef.current = cake;
-                            const cLight = new THREE.PointLight(0xff00ff, 2, 8);
-                            cLight.position.set(cellSize, 0, cellSize);
-                            mazeGroup.add(cLight);
 
-                            setStatus("EXIT OPEN! FIND THE CAKE WHERE YOU STARTED!");
+                            setStatus("EXIT OPEN! RETURN TO START!");
                         }
                     }
                 }
             });
-
-            // WIN Check
-            if (cakeRef.current) {
+            // Win
+            if (cakeRef.current && currentLevelRef.current === 'PARTY') {
                 if (camera.position.distanceTo(cakeRef.current.position) < 2.0) {
                     hasWonRef.current = true;
                     setGameOver(true);
                 }
             }
 
-            // Enemy Logic
-            enemies.forEach(enemy => {
-                enemy.lookAt(camera.position.x, enemy.position.y, camera.position.z);
+
+            // --- ENTITY AI ---
+            enemiesRef.current.forEach(enemy => {
+                // Only process enemies in current level
+                if (enemy.userData.level !== currentLevelRef.current) return;
+
                 const dist = enemy.position.distanceTo(camera.position);
                 const dirToPlayer = new THREE.Vector3().subVectors(camera.position, enemy.position).normalize();
+                dirToPlayer.y = 0; // Don't fly
 
-                const raycaster = new THREE.Raycaster(enemy.position, dirToPlayer, 0, 50);
-                const intersects = raycaster.intersectObjects(mazeGroup.children.filter(c => c.isMesh && c.userData.isBorder !== undefined));
+                // Raycast Visibility
+                const activeGroup = currentLevelRef.current === 'PARTY' ? partyGroupRef.current : cornfieldGroupRef.current;
+                const raycaster = new THREE.Raycaster(enemy.position, dirToPlayer, 0, 40);
+                // Intersect walls
+                const intersects = raycaster.intersectObjects(activeGroup.children.filter(c => c.userData.isBorder));
                 const canSee = (intersects.length === 0 || intersects[0].distance > dist);
 
                 if (currentLevelRef.current === 'PARTY') {
-                    if (canSee && dist < 20) {
-                        if (moveState.current.smile && socialBattery > 0) enemy.userData.state = 'STARE';
-                        else enemy.userData.state = 'CHASE';
+                    // HOST AI
+                    if (canSee && dist < 25) {
+                        // Look at player (billboard does this auto, but logic needs to know)
+                        // Check Smile
+                        if (moveState.current.smile && socialBattery > 0) {
+                            enemy.userData.state = 'STARE';
+                        } else {
+                            enemy.userData.state = 'CHASE';
+                        }
                     } else {
                         enemy.userData.state = 'PATROL';
                     }
 
                     if (enemy.userData.state === 'CHASE') {
-                        enemy.position.x += dirToPlayer.x * 6.0 * delta;
-                        enemy.position.z += dirToPlayer.z * 6.0 * delta;
+                        enemy.position.addScaledVector(dirToPlayer, 6.0 * delta);
                         if (dist < 1.0) {
                             triggerJumpScare(enemy);
-                            setTimeout(() => switchLevel('CORNFIELD'), 1000);
+                            setTimeout(() => {
+                                pendingLevelSwitch.current = 'CORNFIELD';
+                            }, 1500);
                         }
                     } else if (enemy.userData.state === 'PATROL') {
-                        enemy.position.x += (Math.random() - 0.5) * 0.2;
-                        enemy.position.z += (Math.random() - 0.5) * 0.2;
+                        enemy.position.x += (Math.random() - 0.5) * 0.1;
+                        enemy.position.z += (Math.random() - 0.5) * 0.1;
                     }
+
                 } else {
-                    // CORNFIELD
+                    // SCARECROW AI (Weeping Angel + 3D Rotation)
+                    // Point 3D model at player
+                    enemy.lookAt(camera.position.x, enemy.position.y, camera.position.z);
+
                     const playerDir = new THREE.Vector3();
                     camera.getWorldDirection(playerDir);
-                    const angle = playerDir.dot(dirToPlayer);
-                    const isLookingAt = (canSee && angle < -0.4);
+                    const angle = playerDir.dot(dirToPlayer); // Dot product of look vectors
+
+                    // If player is looking roughly towards enemy (angle < -0.3 means looking opposite to enemy-to-player vector)
+                    // Wait, dirToPlayer is Enemy -> Player. 
+                    // If Player looks AT Enemy, PlayerDir is roughly -dirToPlayer.
+                    // So Dot Product is nearly -1.
+                    const isLookingAt = (canSee && angle < -0.3);
 
                     if (isLookingAt) {
                         enemy.userData.state = 'FROZEN';
+                        // Maybe twitch?
                     } else {
                         enemy.userData.state = 'RUSH';
-                        enemy.position.x += dirToPlayer.x * 12.0 * delta;
-                        enemy.position.z += dirToPlayer.z * 12.0 * delta;
+                        // Very fast
+                        enemy.position.addScaledVector(dirToPlayer, 14.0 * delta);
 
                         if (dist < 1.0) triggerJumpScare(enemy);
                     }
@@ -459,18 +618,21 @@ const BackroomsView = ({ onExit }) => {
             if (jumpScareRef.current) return;
             jumpScareRef.current = true;
 
+            // AUDIO SCREECH
             if (audioRef.current) {
-                const now = audioRef.current.ctx.currentTime;
-                audioRef.current.osc.frequency.setValueAtTime(100, now);
-                audioRef.current.osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
-                audioRef.current.gain.gain.setValueAtTime(1, now);
-                audioRef.current.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                const { screamOsc, screamGain, ctx } = audioRef.current;
+                const now = ctx.currentTime;
+                screamOsc.frequency.setValueAtTime(200, now);
+                screamOsc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+                screamOsc.frequency.linearRampToValueAtTime(100, now + 0.8);
+
+                screamGain.gain.setValueAtTime(0, now);
+                screamGain.gain.linearRampToValueAtTime(0.8, now + 0.1);
+                screamGain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
             }
-            setStatus(currentLevelRef.current === 'PARTY' ? "RUDE! EXILE IMMINENT!" : "CONSUMED BY THE CORN.");
-            if (enemy) {
-                const randPt = validSpawnPoints[Math.floor(Math.random() * validSpawnPoints.length)];
-                enemy.position.set(randPt.x, 0, randPt.z);
-            }
+
+            setStatus("CAUGHT.");
+
             setTimeout(() => { jumpScareRef.current = false; }, 2000);
         };
 
@@ -480,9 +642,12 @@ const BackroomsView = ({ onExit }) => {
             window.removeEventListener('keyup', handleKeyUp);
             if (containerRef.current && renderer.domElement) containerRef.current.removeChild(renderer.domElement);
             renderer.dispose();
+            if (audioRef.current) {
+                audioRef.current.ctx.close();
+            }
         };
 
-    }, [audioEnabled, isInMenu]); // Added isInMenu dep
+    }, [isInMenu]); // Re-run when leaving menu
 
     return (
         <div className="relative w-full h-screen bg-black overflow-hidden font-mono select-none">
@@ -519,7 +684,7 @@ const BackroomsView = ({ onExit }) => {
                 </div>
             )}
 
-            {/* MAIN MENU STAGE SELECT (NEW) */}
+            {/* MAIN MENU STAGE SELECT */}
             {isInMenu && (
                 <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 text-yellow-500">
                     <h1 className="text-6xl font-black tracking-widest mb-12 animate-pulse text-yellow-200 drop-shadow-lg">SELECT STAGE</h1>
