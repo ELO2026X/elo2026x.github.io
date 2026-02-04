@@ -42,15 +42,15 @@ export class EntropySystem {
     checkState() {
         if (this.value >= 80) {
             this.state = 'HOT';
-            document.body.style.filter = `hue-rotate(${this.value}deg) contrast(1.2)`; // Glitch effect
+            // document.body.style.filter = `hue-rotate(${this.value}deg) contrast(1.2)`; // REMOVED PER USER REQUEST
             if (window.heatSys) window.heatSys.applyHeat(this.value);
         } else if (this.value <= 20) {
             this.state = 'COLD';
-            document.body.style.filter = `grayscale(${(20 - this.value) / 20})`; // Slow freeze effect
+            // document.body.style.filter = `grayscale(${(20 - this.value) / 20})`; // REMOVED PER USER REQUEST
             if (window.heatSys) window.heatSys.applyHeat(0);
         } else {
             this.state = 'STABLE';
-            document.body.style.filter = 'none';
+            document.body.style.filter = 'none'; // Ensure reset
             if (window.heatSys) window.heatSys.applyHeat(0);
         }
     }
