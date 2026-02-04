@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ELO2026X | SIMULATION DECK</title>
-    <link rel="icon" href="../cover.png" type="image/png">
+    <link rel="icon" href="../The_Crescent_Valley_Franchise/cover.png" type="image/png">
     <style>
         body {
             margin: 0;
@@ -188,7 +188,7 @@
 <body>
     <div id="canvas-container"></div>
 
-    <!-- YouTube Audio Embed (White Bat Audio - Usually Safe) -->
+    <!-- YouTube Audio Embed (Aim To Head Mix - Usually Safe) -->
     <div id="player"
         style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;">
     </div>
@@ -204,7 +204,7 @@
     <div id="ui-layer" class="opacity-0" id="main-ui">
         <header>
             <h1 class="text-header glitch-text">SIMULATION DECK // LEVEL 01</h1>
-            <p class="text-green text-sm mt-2">SYSTEM: ONLINE // PHYSICS: ACTIVE // MUSIC: WHITE BAT AUDIO</p>
+            <p class="text-green text-sm mt-2">SYSTEM: ONLINE // PHYSICS: ACTIVE // MUSIC: AIM TO HEAD</p>
         </header>
 
         <div class="controls-box">
@@ -242,7 +242,7 @@
         </div>
     </div> <!-- Close UI Layer -->
 
-    <script type="module" src="./js/main.js?v=entropy_v2"></script>
+    <script type="module" src="./js/main.js?v=entropy_v3"></script>
 
     <!-- YouTube Logic -->
     <script>
@@ -289,12 +289,12 @@
             player = new YT.Player('player', {
                 height: '1',
                 width: '1',
-                videoId: 'Ua_M3yF0_k0', // White Bat Audio - Hardware (Safe for Embeds)
+                videoId: 'bJ9r_1f1h4U', // Aim To Head Mix (Embed Safe)
                 playerVars: {
                     'playsinline': 1,
                     'controls': 0,
                     'loop': 1,
-                    'playlist': 'Ua_M3yF0_k0', // Loop the single video
+                    'playlist': 'bJ9r_1f1h4U', // Loop the single video
                     'autoplay': 0,
                     'origin': window.location.origin
                 },
@@ -317,8 +317,13 @@
             if (status) {
                 status.innerText = "STREAM ERROR " + event.data + ". TRYING NEXT...";
                 status.classList.remove('hidden');
-                if (player && player.nextVideo) player.nextVideo();
+                clickNext(player);
             }
+        }
+
+        function clickNext(player) {
+            // Placeholder if needed in future
+            if (player && player.nextVideo) player.nextVideo();
         }
     </script>
 </body>

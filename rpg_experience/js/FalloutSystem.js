@@ -8,77 +8,105 @@ export class FalloutSystem {
 
     // Spawn purely visual fire sprites
     spawnFire(position) {
-        const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-        const material = new THREE.MeshBasicMaterial({
-            color: 0xff4400,
-            transparent: true,
-            opacity: 0.8,
-            blending: THREE.AdditiveBlending
-        });
-
-        // Spawn a burst of 5 particles
-        for (let i = 0; i < 5; i++) {
-            const mesh = new THREE.Mesh(geometry, material);
-
-            // Random offset
-            const offset = new THREE.Vector3(
-                (Math.random() - 0.5) * 2,
-                Math.random(),
-                (Math.random() - 0.5) * 2
-            );
-
-            mesh.position.copy(position).add(offset);
-
-            this.scene.add(mesh);
-
-            this.particles.push({
-                mesh: mesh,
-                type: 'FIRE',
-                velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.1,
-                    0.1 + Math.random() * 0.2, // Rise
-                    (Math.random() - 0.5) * 0.1
-                ),
-                life: 1.0 + Math.random() // seconds
-            });
-        }
+        // Legacy fallback
+        this.spawnPsychedelicFlare(position);
     }
 
-    // Spawn static ice crystals
     spawnIce(position) {
-        const geometry = new THREE.OctahedronGeometry(0.5, 0); // Geometric look
+        // Legacy fallback
+        this.spawnIceSculpture(position);
+    }
+
+    // Spawn procedural ice sculptures (Stacks of geometry)
+    spawnIceSculpture(position) {
+        // Randomize geometry type for variety
+        const geos = [
+            new THREE.OctahedronGeometry(0.5, 0),
+            new THREE.ConeGeometry(0.3, 1, 4),
+            new THREE.BoxGeometry(0.4, 0.4, 0.4)
+        ];
+        const geo = geos[Math.floor(Math.random() * geos.length)];
+
         const material = new THREE.MeshStandardMaterial({
             color: 0x00ffff,
-            emissive: 0x0044aa,
+            emissive: 0x001133,
             roughness: 0.1,
             metalness: 0.9,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.8
         });
 
-        // Spawn 3 crystals
-        for (let i = 0; i < 3; i++) {
-            const mesh = new THREE.Mesh(geometry, material);
-            // Random offset
-            const offset = new THREE.Vector3(
-                (Math.random() - 0.5) * 3,
-                0, // On ground
-                (Math.random() - 0.5) * 3
-            );
+        // Spawn a single piece of the sculpture
+        const mesh = new THREE.Mesh(geo, material);
 
-            mesh.position.copy(position).add(offset);
-            mesh.rotation.y = Math.random() * Math.PI;
-            mesh.rotation.z = (Math.random() - 0.5) * 0.5;
+        // Random offset from player center to build "outward"
+        const offset = new THREE.Vector3(
+            (Math.random() - 0.5) * 4,
+            Math.random() * 2, // Stack upwards
+            (Math.random() - 0.5) * 4
+        );
 
-            this.scene.add(mesh);
+        mesh.position.copy(position).add(offset);
 
-            this.particles.push({
-                mesh: mesh,
-                type: 'ICE',
-                velocity: new THREE.Vector3(0, 0, 0),
-                life: 3.0 + Math.random() // Last longer
-            });
-        }
+        // Random rotation to look organic/crystalline
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+
+        // Random scale variation
+        const scale = 0.5 + Math.random() * 1.5;
+        mesh.scale.set(scale, scale, scale);
+
+        this.scene.add(mesh);
+
+        this.particles.push({
+            mesh: mesh,
+            type: 'ICE',
+            velocity: new THREE.Vector3(0, 0, 0),
+            life: 5.0 + Math.random() * 2 // Stay longer
+        });
+    }
+
+    // Spawn psychedelic fire flares
+    spawnPsychedelicFlare(position) {
+        const geometry = new THREE.DodecahedronGeometry(0.4);
+
+        // Psychedelic colors (Purple, Pink, Orange)
+        const colors = [0xff00ff, 0xff4400, 0xee00aa, 0xffaa00];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+
+        // Random offset
+        const offset = new THREE.Vector3(
+            (Math.random() - 0.5) * 1.5,
+            0.5,
+            (Math.random() - 0.5) * 1.5
+        );
+
+        mesh.position.copy(position).add(offset);
+        this.scene.add(mesh);
+
+        this.particles.push({
+            mesh: mesh,
+            type: 'FIRE',
+            velocity: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.2,
+                0.3 + Math.random() * 0.5, // Faster rise
+                (Math.random() - 0.5) * 0.2
+            ),
+            rotationSpeed: new THREE.Vector3(
+                Math.random() * 0.2,
+                Math.random() * 0.2,
+                Math.random() * 0.2
+            ),
+            life: 0.8 + Math.random() * 0.5 // Short burst
+        });
     }
 
     update(delta) {
@@ -90,14 +118,17 @@ export class FalloutSystem {
 
             if (p.type === 'FIRE') {
                 p.mesh.position.add(p.velocity);
-                p.mesh.rotation.x += delta;
-                p.mesh.rotation.y += delta;
-                p.mesh.scale.multiplyScalar(0.95); // Shrink
+                p.mesh.rotation.x += p.rotationSpeed.x;
+                p.mesh.rotation.y += p.rotationSpeed.y;
+                p.mesh.scale.multiplyScalar(0.92); // Fast shrink
                 p.mesh.material.opacity = p.life;
             } else if (p.type === 'ICE') {
                 // Ice just slowly fades and rotates slightly
+                // Gentle float/hum
+                p.mesh.position.y += Math.sin(Date.now() * 0.002 + p.mesh.id) * 0.002;
+
                 if (p.life < 1.0) {
-                    p.mesh.scale.multiplyScalar(0.98);
+                    p.mesh.scale.multiplyScalar(0.95);
                     p.mesh.material.opacity = p.life;
                 }
             }
