@@ -18,14 +18,14 @@
 **Subject:** Forensic Impossibility of Charged Offense (15.22 Seconds)
 
 ### THE DATA
-Official iRIMS/CAD logs from the Victoria County Sheriff's Office confirm the following timeline for the alleged **"First Degree Felony"** (Metric [REDACTED]):
+Official iRIMS/CAD logs from the Victoria County Sheriff's Office confirm the following timeline for the alleged **"[REDACTED_HIGH_VALUE_METRIC]"** (Metric [REDACTED]):
 
 *   **Unit Arrival (GPS Stop):** [Timestamp A]
 *   **Unit Departure (GPS Motion):** [Timestamp B]
 *   **TOTAL STATIONARY DURATION:** **15.22 SECONDS**
 
 ### THE IMPOSSIBILITY
-The State alleges the Plaintiff performed a complex series of First Degree Felony actions within this window, including exiting the vehicle, interacting with a specialized target, and returning to the driver's seat.
+The State alleges the Plaintiff performed a complex series of [REDACTED_HIGH_VALUE_METRIC] actions within this window, including exiting the vehicle, interacting with a specialized target, and returning to the driver's seat.
 
 **Scientific Conclusion:** It is physically and kinetically impossible for a human being to perform these actions in 15.22 seconds.
 
