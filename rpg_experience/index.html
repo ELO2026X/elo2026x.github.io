@@ -237,12 +237,28 @@
             <p class="text-xs text-gray mt-1">MAINTAIN EQUILIBRIUM (40-60)</p>
         </div>
 
+        <div style="position: absolute; bottom: 2rem; right: 2rem; text-align: right;">
+            <div id="inventory-box" class="controls-box">
+                <p class="text-cyan font-bold mb-2">POUCH:</p>
+                <div id="inv-list" class="space-y-1 font-mono text-sm">
+                    <div class="text-white">HERBS: <span id="count-herb" class="text-green">0</span></div>
+                    <div class="text-white">BLUE SHROOMS: <span id="count-shroom" class="text-cyan">0</span></div>
+                    <div class="text-white">POTIONS: <span id="count-potion" class="text-red">0</span></div>
+                </div>
+                <div class="mt-2 pt-2 border-t border-gray-600">
+                    <p class="text-xs text-gray">[F] GATHER</p>
+                    <p class="text-xs text-gray">[C] CRAFT POTION</p>
+                    <p class="text-xs text-gray">[Q] CONSUME</p>
+                </div>
+            </div>
+        </div>
+
         <div style="position: absolute; top: 1.5rem; right: 1.5rem;">
             <a href="../index.html" class="interactive btn-exit">EXIT SIMULATION</a>
         </div>
     </div> <!-- Close UI Layer -->
 
-    <script type="module" src="./js/main.js?v=hunter_v1"></script>
+    <script type="module" src="./js/main.js?v=hunter_v2"></script>
 
     <!-- YouTube Logic -->
     <script>

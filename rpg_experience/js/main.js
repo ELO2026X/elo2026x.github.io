@@ -5,6 +5,7 @@ import { EntropySystem } from './EntropySystem.js';
 import { HeatSystem } from './HeatSystem.js';
 import { FalloutSystem } from './FalloutSystem.js';
 import { VillageSystem } from './VillageSystem.js';
+import { GatheringSystem } from './GatheringSystem.js';
 import { MoltbookAgent } from './MoltbookAgent.js';
 
 // --- CONFIGURATION ---
@@ -16,19 +17,6 @@ const CONFIG = {
         ground: 0x111111,
         grid: 0x00f3ff
     },
-    worldSize: 200
-};
-
-// --- GLOBAL VARIABLES ---
-let scene, camera, renderer, controls;
-let clock, delta;
-let player, playerVelocity;
-let entropySys, falloutSys, villageSys;
-let moltAgent;
-const keyState = {};
-
-// --- INITIALIZATION ---
-function init() {
     // 1. Scene Setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(CONFIG.colors.fog);
@@ -74,6 +62,13 @@ function init() {
     
     villageSys = new VillageSystem(scene);
     villageSys.init();
+
+    gatherSys = new GatheringSystem(scene);
+    gatherSys.init();
+    
+    // Globals for convenience
+    window.entropySys = entropySys;
+    window.gatherSys = gatherSys;
 
     // 6.6 Moltbook Agent
     moltAgent = new MoltbookAgent(scene, new THREE.Vector3(10, 5, 10)); // Spawn near start
@@ -646,6 +641,11 @@ function animate() {
              // Force Entropy to stabilize rapidly
              if (entropySys) entropySys.reduceEntropy(delta * 10); 
         }
+             if (entropySys) entropySys.reduceEntropy(delta * 10); 
+        }
+    }
+    if (gatherSys && player) {
+        gatherSys.update(delta, player.position, keyState);
     }
 
     // CONTINUOUS SPELLCASTING (Hold Key)
