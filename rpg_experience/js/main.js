@@ -1,4 +1,4 @@
-```
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EntropySystem } from './EntropySystem.js';
@@ -18,6 +18,21 @@ const CONFIG = {
         ground: 0x111111,
         grid: 0x00f3ff
     },
+    worldSize: 200
+};
+
+// --- GLOBAL VARIABLES ---
+let scene, camera, renderer, controls;
+let clock, delta;
+let player, playerVelocity;
+let entropySys, falloutSys, villageSys, gatherSys, monsterSys;
+let moltAgent;
+const keyState = {};
+let isAttacking = false;
+let attackCooldown = 0;
+
+// --- INITIALIZATION ---
+function init() {
     // 1. Scene Setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(CONFIG.colors.fog);
@@ -60,18 +75,18 @@ const CONFIG = {
     window.heatSys = new HeatSystem();
     entropySys = new EntropySystem();
     falloutSys = new FalloutSystem(scene);
-    
+
     villageSys = new VillageSystem(scene);
     villageSys.init();
 
     gatherSys = new GatheringSystem(scene);
     gatherSys.init();
-    
+
     // Globals for convenience
     const keyState = {};
-let entropySys, falloutSys, villageSys, gatherSys, monsterSys;
-let isAttacking = false;
-let attackCooldown = 0;
+    let entropySys, falloutSys, villageSys, gatherSys, monsterSys;
+    let isAttacking = false;
+    let attackCooldown = 0;
     window.entropySys = entropySys;
     window.gatherSys = gatherSys;
 
@@ -643,30 +658,30 @@ function animate() {
     if (moltAgent && player) moltAgent.update(delta, player.position);
     if (villageSys && player) {
         villageSys.update(delta, player.position);
-        
+
         // SAFE ZONE LOGIC
         if (villageSys.isInsideSafeZone(player.position)) {
-             // Force Entropy to stabilize rapidly
-             if (entropySys) entropySys.reduceEntropy(delta * 10); 
+            // Force Entropy to stabilize rapidly
+            if (entropySys) entropySys.reduceEntropy(delta * 10);
         }
     }
     if (gatherSys && player) {
         gatherSys.update(delta, player.position, keyState);
     }
-    
+
     // COMBAT LOGIC
     if (attackCooldown > 0) attackCooldown -= delta;
-    if (keyState['Space'] && attackCooldown <= 0 && keyState['ShiftLeft']) { 
+    if (keyState['Space'] && attackCooldown <= 0 && keyState['ShiftLeft']) {
         // Shift+Space = Attack (For now, or use Click)
         // Let's use Mouse Click ideally, but for now Key 'V' or similar
     }
-    
+
     // Better Attack Input: Key V
     if (keyState['KeyV'] && attackCooldown <= 0) {
         isAttacking = true;
         attackCooldown = 0.5; // Swing time
         console.log("Player Attacking!");
-        
+
         // Visual Swing (Quick rotate hack)
         // Access Sword Group if possible, or just animate arm
     } else {
