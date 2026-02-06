@@ -3,6 +3,7 @@ export const SCENARIOS = [
         id: "SCENARIO_01",
         title: "THE TRAFFIC STOP",
         enemy: "VPD PATROL OFFICER",
+        tier: 1, // MINOR
         desc: "STYLE: 'THE BLUE WALL'. Aggressive, loud, and prone to 'technical failures'.",
         hp: 60,
         immunity: 20,
@@ -26,6 +27,7 @@ export const SCENARIOS = [
         id: "SCENARIO_02",
         title: "THE BUDGET OFFICE",
         enemy: "VCSO GRANT ADMIN",
+        tier: 2, // ELITE
         desc: "STYLE: 'THE PAPER SHREDDER'. Hides behind bureaucracy, redactions, and 'Clerical Errors'.",
         hp: 90,
         immunity: 40,
@@ -49,6 +51,7 @@ export const SCENARIOS = [
         id: "SCENARIO_03",
         title: "THE COMMISSIONERS COURT",
         enemy: "COUNTY JUDGE",
+        tier: 3, // BOSS
         desc: "STYLE: 'THE SILENT CHAMBER'. Polite, procedural, and completely unresponsive.",
         hp: 130,
         immunity: 60,
@@ -72,6 +75,7 @@ export const SCENARIOS = [
         id: "SCENARIO_05",
         title: "THE HIGHWAY INTERDICTION",
         enemy: "TX DPS TROOPER",
+        tier: 2, // ELITE
         desc: "STYLE: 'THE HIGHWAYMAN'. Focused entirely on seizing assets. Predatory and fast.",
         hp: 160,
         immunity: 50,
@@ -95,6 +99,7 @@ export const SCENARIOS = [
         id: "SCENARIO_04",
         title: "THE DISTRICT ATTORNEY",
         enemy: "D.A. & THE GRID",
+        tier: 3, // BOSS
         desc: "STYLE: 'THE LEGAL BULLY'. Overcharges, delays, and abuses procedure to crush you.",
         hp: 250,
         immunity: 100,

@@ -26,6 +26,53 @@ class GameState {
         this.showCaseSelection();
         this.log("SYSTEM READY. WAITING FOR INPUT...", "system-msg");
         this.log("TIP: TYPE 'HELP' IN COMMAND LINE FOR ADVANCED OPTIONS.", "system-msg");
+
+        // CHECK SAVE
+        if (localStorage.getItem("CIVIL_RIGHTS_RPG_V1")) {
+            this.log(">> SAVE PROFILE DETECTED. TYPE 'LOAD' TO RESTORE.", "highlight");
+        }
+    }
+
+    // --- PERSISTENCE ---
+    saveGame() {
+        const data = {
+            player: {
+                level: this.player.level,
+                xp: this.player.xp,
+                xpToNext: this.player.xpToNext,
+                classType: this.player.classType,
+                stats: this.player.stats
+            },
+            campaign: {
+                caseIndex: this.currentCaseIndex
+            }
+        };
+        localStorage.setItem("CIVIL_RIGHTS_RPG_V1", JSON.stringify(data));
+        this.log(">> GAME SAVED TO SUBSTRATE STORAGE.", "safe");
+    }
+
+    loadGame() {
+        const raw = localStorage.getItem("CIVIL_RIGHTS_RPG_V1");
+        if (!raw) {
+            this.log(">> NO SAVE DATA FOUND.", "danger");
+            return;
+        }
+
+        const data = JSON.parse(raw);
+        this.player.loadData(data.player);
+        this.currentCaseIndex = data.campaign.caseIndex;
+
+        this.log(`>> PROFILE LOADED: LEVEL ${this.player.level} ${this.player.classType}`, "safe");
+        this.updateStats();
+
+        // Restart current scenario with loaded stats
+        this.startScenario(this.currentCaseIndex);
+    }
+
+    resetGame() {
+        localStorage.removeItem("CIVIL_RIGHTS_RPG_V1");
+        this.log(">> SAVE DATA PURGED. STARTING NEW CAREER...", "danger");
+        setTimeout(() => window.location.reload(), 1000);
     }
 
     setupCLI() {
@@ -65,6 +112,11 @@ class GameState {
             window.location.reload();
             return;
         }
+
+        // --- PERSISTENCE COMMANDS ---
+        if (action === "SAVE") { this.saveGame(); return; }
+        if (action === "LOAD") { this.loadGame(); return; }
+        if (action === "RESET") { this.resetGame(); return; }
 
         // --- CONSTITUTIONAL RIGHTS ---
         if (has("INVOKE") && (has("RIGHTS") || has("CONSTITUTION") || has("5TH") || has("FIFTH"))) {
@@ -424,6 +476,9 @@ class GameState {
         if (this.player.gainXP(xpGain)) {
             this.log(">> LEVEL UP! STATS INCREASED.", "highlight");
         }
+
+        // AUTOSAVE
+        this.saveGame();
 
         this.log(">> TYPE 'CONTINUE' TO PROCEED TO NEXT CASE.", "system-msg");
         document.getElementById('enemy-zone').style.borderColor = "#33ff33";

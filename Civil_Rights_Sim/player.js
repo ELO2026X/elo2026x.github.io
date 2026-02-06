@@ -29,6 +29,17 @@ export class Player {
         }
     }
 
+    loadData(data) {
+        if (!data) return;
+        this.level = data.level || 1;
+        this.xp = data.xp || 0;
+        this.xpToNext = data.xpToNext || 100;
+        this.classType = data.classType || "AUDITOR";
+        if (data.stats) {
+            this.stats = data.stats;
+        }
+    }
+
     gainXP(amount) {
         this.xp += amount;
         if (this.xp >= this.xpToNext) {
