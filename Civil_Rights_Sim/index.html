@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIVIL RIGHTS SIMULATION | DOCKET DEFENSE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="terminal-container">
+
+        <!-- HEADER / STATUS BAR -->
+        <header class="status-bar">
+            <div class="status-item">CASE: <span id="case-id" class="highlight">6:25-CV-75</span></div>
+            <div class="status-item">JUDGE: <span id="judge-name" class="danger">PENDING...</span></div>
+            <div class="status-item">CREDIBILITY: <span id="hp-val" class="safe">100%</span></div>
+            <div class="status-item">PRESSURE: <span id="pressure-val" class="highlight">0%</span></div>
+        </header>
+
+        <!-- MAIN GAME AREA -->
+        <main id="game-screen">
+
+            <!-- ENEMY ZONE -->
+            <div id="enemy-zone" class="panel">
+                <h2 id="enemy-name" class="panel-title text-red">OPPONENT: VICTORIA PD</h2>
+                <div id="enemy-status">STATUS: QUALIFIED IMMUNITY ACTIVE</div>
+                <div id="enemy-intent">INTENT: PREPARING 'REASONABLE SUSPICION' STOP...</div>
+                <div class="ascii-art" id="enemy-art">
+                    <!-- Art injected via JS -->
+                </div>
+            </div>
+
+            <!-- LOG / NARRATIVE ZONE -->
+            <div id="log-zone" class="panel">
+                <div id="log-content">
+                    <p class="system-msg">> SYSTEM INITIALIZED...</p>
+                    <p class="system-msg">> LOADING VICTORIA COUNTY SIMULATION DATA...</p>
+                    <p class="system-msg">> UPLOADING 'PATTERSON ADMISSION' METADATA...</p>
+                    <p class="system-msg">> READY. SELECT A CASE FILE TO BEGIN.</p>
+                </div>
+            </div>
+
+            <!-- PLAYER HAND / ACTIONS -->
+            <div id="player-zone" class="panel">
+                <h2 class="panel-title text-green">YOUR DOCKET</h2>
+                <div id="card-container">
+                    <!-- Cards injected via JS -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- CONTROLS / DECISION PROMPT (Hidden by default) -->
+        <div id="modal-overlay" class="hidden">
+            <div class="modal-content">
+                <h2 id="modal-title">CASE SELECTION</h2>
+                <div id="modal-options">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPTS -->
+    <script type="module" src="game.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,265 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+    --bg-color: #050505;
+    --panel-bg: #0a0a0a;
+    --text-color: #cccccc;
+    --highlight: #00f3ff;
+    /* Cyan */
+    --danger: #ff3333;
+    /* Red */
+    --safe: #33ff33;
+    /* Green */
+    --border: #333333;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'JetBrains Mono', monospace;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.terminal-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* STATUS BAR */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 2px solid var(--border);
+    background-color: var(--panel-bg);
+    margin-bottom: 10px;
+}
+
+.status-item {
+    font-weight: bold;
+}
+
+.highlight {
+    color: var(--highlight);
+}
+
+.danger {
+    color: var(--danger);
+    text-shadow: 0 0 5px rgba(255, 51, 51, 0.5);
+}
+
+.safe {
+    color: var(--safe);
+}
+
+.text-red {
+    color: var(--danger);
+}
+
+.text-green {
+    color: var(--safe);
+}
+
+/* MAIN GAME SCREEN */
+#game-screen {
+    display: grid;
+    grid-template-rows: 1fr 2fr 1.5fr;
+    /* Enemy (top), Log (mid), Player (bot) */
+    gap: 10px;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.panel {
+    border: 1px solid var(--border);
+    background-color: rgba(10, 10, 10, 0.9);
+    padding: 15px;
+    position: relative;
+    overflow: hidden;
+}
+
+.panel-title {
+    margin-top: 0;
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+/* ENEMY ZONE */
+#enemy-zone {
+    border: 1px solid var(--danger);
+    text-align: center;
+}
+
+#enemy-status {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: var(--danger);
+}
+
+.ascii-art {
+    font-size: 10px;
+    line-height: 10px;
+    white-space: pre;
+    color: var(--danger);
+    opacity: 0.7;
+    margin-top: 10px;
+}
+
+/* LOG ZONE */
+#log-zone {
+    overflow-y: auto;
+    font-size: 0.9rem;
+    border: 1px solid var(--highlight);
+    box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1);
+}
+
+.log-entry {
+    margin-bottom: 8px;
+}
+
+.log-turn {
+    border-top: 1px dashed #333;
+    padding-top: 5px;
+    margin-top: 5px;
+    color: #888;
+}
+
+.system-msg {
+    color: var(--highlight);
+}
+
+.combat-msg {
+    color: var(--text-color);
+}
+
+.damage-msg {
+    color: var(--danger);
+    font-weight: bold;
+}
+
+/* PLAYER ZONE */
+#player-zone {
+    border: 1px solid var(--safe);
+}
+
+#card-container {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 10px;
+    height: 100%;
+}
+
+.card {
+    border: 1px solid var(--safe);
+    background: #000;
+    min-width: 140px;
+    height: 180px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card:hover {
+    background: var(--safe);
+    color: #000;
+    transform: translateY(-5px);
+    box-shadow: 0 0 15px var(--safe);
+}
+
+.card-title {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    border-bottom: 1px solid currentColor;
+}
+
+.card-desc {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.card-cost {
+    font-size: 0.8rem;
+    font-weight: bold;
+    align-self: flex-end;
+}
+
+/* MODAL */
+#modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    border: 2px solid var(--highlight);
+    background: #000;
+    padding: 30px;
+    max-width: 600px;
+    text-align: center;
+    box-shadow: 0 0 30px var(--highlight);
+}
+
+#modal-options button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 15px;
+    background: transparent;
+    border: 1px solid var(--highlight);
+    color: var(--highlight);
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#modal-options button:hover {
+    background: var(--highlight);
+    color: #000;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border: 1px solid #444;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
