@@ -20,8 +20,15 @@
 **Strategic Function:** Militarization.
 **Anomaly:** Why does a rural traffic unit need Rifle-Resistant Armor? Suggests anticipation of escalation or "War Zone" mentality (Sector 77901).
 
+### NODE 4: THE PARADOX (CREDIT RATING)
+**Rating:** `AA Stable` (S&P Global)
+**Debt:** `$45.4 Million`
+**The Lie:** This rating assumes "Neutral Governance Risks" while omitting the **17-Year Arsenic Violation** (EPA AO-26-01059 / WCID#2).
+**Strategy:** Proving the County *hidden* the environmental liability to secure cheaper debt constitutes **Securities Fraud**.
+
 ---
 
 ### TACTICAL ACTION
 *   **Qui Tam Interception:** We use Grant `#4433201` as the primary evidence of "Fraud against the State/Federal Government."
 *   **Argument:** "The Department is falsifying criminal metrics (framing citizens) to defraud the OAG of $741k."
+*   **Securities Projection:** We notify S&P Global of the "Material Omission" (Arsenic Data) to destabilize the credit rating.
